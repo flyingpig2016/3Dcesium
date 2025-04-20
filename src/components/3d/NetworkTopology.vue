@@ -493,7 +493,7 @@ const createRoomLayout = () => {
   const wallMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xF8F8F8,
     transparent: true,
-    opacity: .9,
+    opacity: .5,
     roughness: 0.2,
     metalness: 0.05,
     transmission: 0.0,
@@ -885,6 +885,9 @@ const createDevices = () => {
     
     // Add label
     addDeviceLabel('FTTR Gateway', routerModel, 0.5); // 调整标签高度
+    
+    // Add title
+    addFTTRTitle(routerModel);
   } else {
     // Fallback - create basic geometric shape
     const routerGeometry = new THREE.SphereGeometry(0.4, 32, 32); // 调整几何体大小
@@ -910,6 +913,9 @@ const createDevices = () => {
     
     // Add fttr label
     addDeviceLabel('FTTR Gateway', fttr, 0.5); // 调整标签高度
+    
+    // Add title
+    addFTTRTitle(fttr);
   }
   
   // Create device meshes for all devices in store
@@ -1123,6 +1129,51 @@ const addDeviceLabel = (text, parent, offsetY = 0.5) => {
   
   parent.add(label);
   return label;
+};
+
+// Helper function to add a title above the FTTR device
+const addFTTRTitle = (parent) => {
+  // Create title container
+  const titleContainer = document.createElement('div');
+  titleContainer.className = 'fttr-title-container';
+  
+  // Create title element
+  const titleElement = document.createElement('div');
+  titleElement.className = 'fttr-title';
+  
+  // Split text into parts for animation
+  const titleParts = [
+    '基于FTTR全光智慧家庭底座，',
+    '打造存儲、安防、娱乐、康养等智家业务，',
+    '助力运营商扩展Al服务边界'
+  ];
+  
+  // Create spans for each part to enable animation
+  titleParts.forEach((part, index) => {
+    const partSpan = document.createElement('div');
+    partSpan.className = 'title-part';
+    partSpan.textContent = part;
+    partSpan.style.animationDelay = `${0.5 + index * 0.3}s`;
+    titleElement.appendChild(partSpan);
+  });
+  
+  titleContainer.appendChild(titleElement);
+  
+  // Create CSS2D object for the title
+  const titleLabel = new CSS2DObject(titleContainer);
+  
+  // Position the title above the FTTR device
+  if (parent.userData && parent.userData.isModel) {
+    const box = new THREE.Box3().setFromObject(parent);
+    const height = box.max.y - box.min.y;
+    titleLabel.position.set(0, height + 5, 0); // Position higher than regular label
+  } else {
+    titleLabel.position.set(0, 2.5, 0);
+  }
+  
+  // Add the title to the parent object
+  parent.add(titleLabel);
+  return titleLabel;
 };
 
 // Create connections between devices
@@ -1970,6 +2021,58 @@ const onResize = () => {
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
+}
+
+:deep(.fttr-title-container) {
+  width: 400px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+
+:deep(.fttr-title) {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: center;
+  padding: 8px 16px;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(0, 83, 151, 0.8), rgba(0, 158, 198, 0.8));
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: glow 3s ease-in-out infinite alternate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.title-part) {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeIn 0.8s ease-out forwards;
+  white-space: nowrap;
+  margin: 3px 0;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 10px rgba(32, 156, 238, 0.5);
+  }
+  to {
+    box-shadow: 0 0 20px rgba(32, 156, 238, 0.8), 0 0 30px rgba(32, 156, 238, 0.4);
+  }
 }
 
 /* 调试面板样式 */
