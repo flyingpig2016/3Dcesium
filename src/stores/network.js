@@ -10,71 +10,81 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'tv',
       status: 'online',
       active: true,
-      connections: ['fttr'],
+      // connections: ['fttr'],
       position: { x: -6, y: .3, z: 0 }
     },
     {
       id: 'tv2',
-      name: '主卧电脑',
+      name: '电脑',
       type: 'livingcomputer',
       status: 'idle',
-      active: false,
+      active: true,
       connections: ['fttr'],
       position: { x: -7, y: 1, z: -6 }
     },
     {
-      id: 'speaker1',
-      name: '客厅音箱',
-      type: 'speaker',
+      id: 'stb1',
+      name: '机顶盒',
+      type: 'stb',
       status: 'online',
       active: true,
       connections: ['fttr', 'tv1'],
-      position: { x: -6, y: 0.3, z: -3 }
+      // connections: ['fttr'],
+      position: { x: -5.5, y: .3, z: -2.2 }
     },
     {
-      id: 'speaker2',
-      name: '主卧音箱',
-      type: 'speaker',
+      id: 'print2',
+      name: '打印机',
+      type: 'print',
       status: 'offline',
-      active: false,
+      active: true,
       connections: ['fttr'],
-      position: { x: -5, y: 0.3, z: -6 }
+      position: { x: 6, y: 0, z: -1 }
     },
     {
       id: 'ac1',
-      name: '客厅空调',
+      name: '空调',
       type: 'ac',
       status: 'online',
       active: true,
-      connections: ['fttr'],
+      connections: ['router1'],
       position: { x: 6, y: 2, z: -3.5 }
     },
     {
       id: 'ac2',
-      name: '客卧空调',
+      name: '空调',
       type: 'ac',
       status: 'online',
-      active: false,
-      connections: ['fttr'],
+      active: true,
+      connections: ['router1'],
       position: { x: 0, y: 2, z: -8.5 }
     },
     {
       id: 'ac3',
-      name: '客卧空调',
+      name: '空调',
       type: 'ac',
       status: 'offline',
-      active: false,
-      connections: ['fttr'],
+      active: true,
+      connections: ['router1'],
       position: { x: 5, y: 2, z: -8.5 }
     },
     {
       id: 'pc1',
-      name: '工作电脑',
+      name: '电脑',
       type: 'pc',
       status: 'online',
       active: true,
+      connections: ['router1'],
+      position: { x: 5, y: 0.3, z: -8 }
+    },
+    {
+      id: 'security_camera1',
+      name: '监控摄像头',
+      type: 'security_camera',
+      status: 'online',
+      active: true,
       connections: ['fttr'],
-      position: { x: 5, y: 0.3, z: -5.5 }
+      position: { x: -1, y: 2.2, z: -2.5 }
     },
     {
       id: 'light1',
@@ -84,6 +94,24 @@ export const useNetworkStore = defineStore('network', () => {
       active: true,
       connections: ['fttr'],
       position: { x: 0, y: 0.3, z: 2 }
+    },
+    {
+      id: 'vacuum1',
+      name: '智能扫地机器人',
+      type: 'vacuum',
+      status: 'online',
+      active: true,
+      connections: ['router1'],
+      position: { x: 3, y: 0.1, z: -2 }
+    },
+    {
+      id: 'router1',
+      name: 'WIFI',
+      type: 'router',
+      status: 'online',
+      active: true,
+      connections: ['fttr'],
+      position: { x: 1, y: -2, z: -7.7 }
     },
     // {
     //   id: 'light2',
@@ -112,15 +140,7 @@ export const useNetworkStore = defineStore('network', () => {
     //   connections: ['fttr'],
     //   position: { x: 6, y: 0.3, z: -5 }
     // },
-    {
-      id: 'vacuum1',
-      name: '智能扫地机器人',
-      type: 'vacuum',
-      status: 'online',
-      active: true,
-      connections: ['fttr'],
-      position: { x: 1, y: 0.1, z: -3 }
-    }
+
   ]);
 
   // Computed properties

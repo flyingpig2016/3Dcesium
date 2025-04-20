@@ -319,11 +319,15 @@ const modelMapping = {
   livingcomputer:'livingcomputer.glb',
   tv: 'tv.glb',
   speaker: 'speaker.glb',
+  print:'print.glb',
+  stb:'stb.glb',
   ac: 'ac.glb',
   pc: 'computer.glb',
   fttr: 'fttr.glb',
   office_pc: 'office_computer.glb',
   vacuum: 'vacuum.glb',
+  router:'router.glb',
+  security_camera:'security_camera.glb'
 };
 
 // Initialize Three.js scene
@@ -867,6 +871,10 @@ const createDevices = () => {
     routerModel.position.set(0, 5, -4);
     routerModel.rotation.y = Math.PI / 2;
     
+    // Add water ripple effect below the FTTR device
+    const ripples = createWaterRipple(routerModel);
+    scene.value.add(ripples);
+    
     // Add fttr model to scene
     scene.value.add(routerModel);
     
@@ -877,7 +885,8 @@ const createDevices = () => {
       status: 'online',
       details: 'Central network gateway',
       isModel: true,
-      originalScale: routerScale
+      originalScale: routerScale,
+      rippleEffect: ripples
     };
     
     // Store in deviceMeshes
@@ -902,11 +911,17 @@ const createDevices = () => {
     const fttr = new THREE.Mesh(routerGeometry, routerMaterial);
     fttr.position.set(0, 0.3, 0); // 调整位置以适应新地板
     fttr.castShadow = true;
+    
+    // Add water ripple effect below the FTTR device
+    const ripples = createWaterRipple(fttr);
+    scene.value.add(ripples);
+    
     fttr.userData = { 
       type: 'fttr',
       name: 'FTTR Gateway',
       status: 'online',
-      details: 'Central network gateway'
+      details: 'Central network gateway',
+      rippleEffect: ripples
     };
     scene.value.add(fttr);
     meshes['fttr'] = fttr;
@@ -963,6 +978,23 @@ const createDevices = () => {
           // Rotate TV to face the center
           model.lookAt(new THREE.Vector3(0, devicePosition.y, 0));
           break;
+        case 'print':
+          scale = 2; // 打印机尺寸 (约0.3-0.4米高)
+          // model.rotation.z = -Math.PI / 2;
+          break;
+        case 'stb':
+          scale = .2; // 机顶盒尺寸 (约0.3-0.4米高)
+          break;
+        case 'security_camera':
+          scale = .1; // 监控摄像头尺寸 (约0.3-0.4米高)
+          // model.position.y = .3; // 调整高度
+          // model.rotation.z = -Math.PI / 2;
+          break;
+        case 'pc':
+          scale = 2; // 电脑
+          // model.position.y = 1; // 调整高度
+          // model.rotation.z = -Math.PI / 2;
+          break;
         case 'speaker':
           scale = .8; // 音箱尺寸 (约0.3-0.4米高)
           model.position.y = 1; // 调整高度
@@ -984,6 +1016,10 @@ const createDevices = () => {
           scale = 1; // 扫地机器人尺寸 (直径约0.35米)
           // Place on floor
           model.position.y = 0.05;
+          break;
+        case 'router':
+          scale = 1;
+          model.position.y = -2;
           break;
         default:
           scale = 1;
@@ -1115,8 +1151,15 @@ const addDeviceLabel = (text, parent, offsetY = 0.5) => {
   
   const label = new CSS2DObject(div);
   
-  // Check if parent is a model or mesh
-  if (parent.userData && parent.userData.isModel) {
+  // 为特定设备添加特殊处理
+  if (parent.userData && parent.userData.id === 'tv1') {
+    // 客厅电视特殊处理
+    label.position.set(0, 1.1, 0);
+  } else if (parent.userData && parent.userData.id === 'tv2') {
+    // 电脑特殊处理
+    label.position.set(0, 0.5, 0);
+  } else if (parent.userData && parent.userData.isModel) {
+    // 其他模型，按原来的逻辑处理
     // For models, we position the label above the model
     // We need to get the bounding box to determine the height
     const box = new THREE.Box3().setFromObject(parent);
@@ -1362,7 +1405,7 @@ const createConnections = () => {
 // Helper function to create a data packet
 const createDataPacket = (curve, color, packetsArray) => {
   // Create the packet geometry
-  const packetGeometry = new THREE.SphereGeometry(0.12, 12, 12); // Slightly larger packets
+  const packetGeometry = new THREE.SphereGeometry(0.12, 10, 10); // Slightly larger packets
   
   // Create a glowing material for the packet
   const packetMaterial = new THREE.MeshStandardMaterial({
@@ -1641,6 +1684,65 @@ const animate = () => {
   
   // Get current time for animations
   const time = Date.now() * 0.001;
+  
+  // 更新水波纹效果
+  scene.value.traverse((object) => {
+    // 找到所有水波纹组
+    if (object.userData && object.userData.ripples) {
+      const ripples = object.userData.ripples;
+      const centerGlow = object.userData.centerGlow;
+      const colors = object.userData.colors;
+      
+      // 更新中心发光效果
+      if (centerGlow && centerGlow.userData.pulsate) {
+        // 光晕脉动效果
+        const glowIntensity = 0.7 + Math.sin(time * 2) * 0.3;
+        centerGlow.material.emissiveIntensity = glowIntensity;
+        
+        // 光晕尺寸小幅度变化
+        const glowScale = 1.0 + Math.sin(time * 1.5) * 0.1;
+        centerGlow.scale.set(glowScale, glowScale, glowScale);
+        
+        // 光晕颜色微妙变化
+        const hue = (time * 0.05) % 1;
+        const saturation = 0.8;
+        const lightness = 0.5 + Math.sin(time) * 0.1;
+        centerGlow.material.emissive.setHSL(hue, saturation, lightness);
+        centerGlow.material.color.copy(centerGlow.material.emissive);
+      }
+      
+      // 更新每个波纹的缩放和透明度
+      ripples.forEach((ripple, index) => {
+        const params = ripple.userData;
+        // 计算当前阶段 - 使用sin函数使波纹循环扩散
+        const phase = (Math.sin(time * params.animationSpeed + params.animationOffset) + 1) / 2;
+        
+        // 计算当前缩放 - 从初始到最大
+        const scale = params.initialScale + phase * (params.maxScale - params.initialScale);
+        ripple.scale.set(scale, scale, scale);
+        
+        // 反向计算透明度 - 随着扩散而减小
+        ripple.material.opacity = params.initialOpacity * (1 - phase * 0.85);
+        
+        // 添加颜色过渡效果
+        if (colors && params.baseColor) {
+          // 为每个波纹创建独特的颜色变化
+          const colorShift = (time * 0.2 + index * 0.3) % 1.0;
+          const nextColorIndex = (params.colorIndex + 1) % colors.length;
+          const currentColor = params.baseColor.clone();
+          const targetColor = colors[nextColorIndex].clone();
+          
+          // 根据扩散相位混合颜色
+          const mixedColor = currentColor.lerp(targetColor, Math.sin(colorShift * Math.PI * 2) * 0.5 + 0.5);
+          ripple.material.color.copy(mixedColor);
+          ripple.material.emissive.copy(mixedColor);
+          
+          // 随着扩散调整发光强度
+          ripple.material.emissiveIntensity = 0.6 * (1 - phase * 0.5);
+        }
+      });
+    }
+  });
   
   // 更新随时间变化的光效
   scene.value.traverse((object) => {
@@ -1946,6 +2048,107 @@ const onResize = () => {
   
   renderer.value.setSize(container.value.clientWidth, container.value.clientHeight);
   labelRenderer.value.setSize(container.value.clientWidth, container.value.clientHeight);
+};
+
+// Helper function to create water ripple effect
+const createWaterRipple = (device) => {
+  // Create container group for all ripples
+  const rippleGroup = new THREE.Group();
+  
+  // Get position from the device
+  let devicePosition;
+  if (device.userData && device.userData.isModel) {
+    const box = new THREE.Box3().setFromObject(device);
+    devicePosition = new THREE.Vector3();
+    box.getCenter(devicePosition);
+    // Move to bottom of device
+    devicePosition.y = box.min.y;
+  } else {
+    devicePosition = device.position.clone();
+    devicePosition.y = 0; // Place at ground level
+  }
+  
+  // Position the ripple group
+  rippleGroup.position.copy(devicePosition);
+  
+  // Create multiple ripple rings with different sizes and speeds
+  const rippleCount = 4;
+  const rippleMeshes = [];
+  
+  // 定义波纹颜色渐变
+  const colors = [
+    new THREE.Color(0x00c8ff), // 亮蓝色
+    new THREE.Color(0x0088ff), // 蓝色
+    new THREE.Color(0x00ffea), // 青色
+    new THREE.Color(0x80c0ff)  // 淡蓝色
+  ];
+  
+  for (let i = 0; i < rippleCount; i++) {
+    // Create ripple geometry - a flat ring
+    const innerRadius = 0.3 + i * 0.15;
+    const outerRadius = innerRadius + 0.1 + (i * 0.02);
+    const rippleGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 32);
+    
+    // Create ripple material with glow effect
+    const rippleMaterial = new THREE.MeshPhongMaterial({
+      color: colors[i % colors.length],
+      emissive: colors[i % colors.length],
+      emissiveIntensity: 0.6,
+      transparent: true,
+      opacity: 0.7 - (i * 0.1),
+      side: THREE.DoubleSide,
+      shininess: 80
+    });
+    
+    // Create mesh and position it horizontally
+    const rippleMesh = new THREE.Mesh(rippleGeometry, rippleMaterial);
+    rippleMesh.rotation.x = -Math.PI / 2; // Rotate to be flat on ground
+    rippleMesh.position.y = 0.02 + (i * 0.005); // Stagger height slightly to avoid z-fighting
+    
+    // Store animation parameters in userData
+    rippleMesh.userData = {
+      initialScale: 1.0,
+      maxScale: 2.2 + i * 0.8,
+      animationSpeed: 0.4 + i * 0.15, // Different speeds for each ripple
+      animationOffset: i * (Math.PI / (rippleCount * 0.5)), // Phase offset
+      initialOpacity: 0.7 - (i * 0.1), // Decreasing opacity for outer ripples
+      colorIndex: i % colors.length,
+      baseColor: colors[i % colors.length].clone()
+    };
+    
+    rippleGroup.add(rippleMesh);
+    rippleMeshes.push(rippleMesh);
+  }
+  
+  // Add a central glow effect
+  const glowGeometry = new THREE.CircleGeometry(0.4, 32);
+  const glowMaterial = new THREE.MeshPhongMaterial({
+    color: 0x00a0ff,
+    emissive: 0x00a0ff,
+    emissiveIntensity: 0.8,
+    transparent: true,
+    opacity: 0.7,
+    side: THREE.DoubleSide
+  });
+  
+  const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+  glowMesh.rotation.x = -Math.PI / 2;
+  glowMesh.position.y = 0.03; // Slightly above rings
+  glowMesh.userData = {
+    pulsate: true
+  };
+  
+  rippleGroup.add(glowMesh);
+  
+  // Store ripple meshes in the group's userData
+  rippleGroup.userData = {
+    ripples: rippleMeshes,
+    centerGlow: glowMesh,
+    deviceRef: device,
+    colors: colors
+  };
+  
+  return rippleGroup;
 };
 </script>
 

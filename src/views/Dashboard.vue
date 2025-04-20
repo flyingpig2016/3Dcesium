@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard">
     <header class="dashboard-header glass-panel">
-      <h1>Smart Home Topology</h1>
+      <h1>智能家庭网络拓扑</h1>
       <div class="controls">
         <button class="btn btn-primary toggle-mode" @click="toggleDarkMode">
           <span v-if="darkMode">Light Mode</span>
