@@ -124,6 +124,7 @@ const tooltipContent = ref({ title: '', status: '', details: '' });
 const tooltipPosition = ref({ x: 0, y: 0 });
 const tooltipVisible = ref(false);
 const showAnimation = ref(true); // Control animation visibility
+const currentHighlightedDeviceId = ref(null); // 跟踪当前高亮的设备ID
 
 // 3D Objects - use shallowRef for objects that have read-only properties
 const deviceMeshes = shallowRef({});
@@ -1317,7 +1318,7 @@ const createDataPacket = (curve, color, packetsArray) => {
 // Event handlers
 const addEventListeners = () => {
   // Mouse move event for raycasting
-  // container.value.addEventListener('mousemove', onMouseMove);
+  container.value.addEventListener('mousemove', onMouseMove);
   
   // Mouse click event for device selection
   container.value.addEventListener('click', onMouseClick);
@@ -1356,6 +1357,7 @@ const onMouseMove = (event) => {
   if (intersects.length > 0) {
     // Mouse is over a device
     const device = intersects[0].object;
+    const deviceId = device.userData.id;
     
     // Show tooltip with device info
     tooltipContent.value = {
@@ -1373,15 +1375,30 @@ const onMouseMove = (event) => {
     // Show tooltip
     tooltipVisible.value = true;
     
-    // Highlight the device and its connections
-    highlightDevice(device.userData.id);
+    // 只有当前悬停的设备与之前高亮的设备不同时，才更新高亮状态
+    if (currentHighlightedDeviceId.value !== deviceId) {
+      // 如果之前有高亮设备，先重置
+      if (currentHighlightedDeviceId.value) {
+        resetHighlights();
+      }
+      
+      // 高亮新设备
+      highlightDevice(deviceId);
+      currentHighlightedDeviceId.value = deviceId;
+    }
     
     // Set cursor to pointer
     container.value.style.cursor = 'pointer';
   } else {
     // Mouse is not over a device
     tooltipVisible.value = false;
-    resetHighlights();
+    
+    // 只有当前有高亮设备时才重置
+    if (currentHighlightedDeviceId.value) {
+      resetHighlights();
+      currentHighlightedDeviceId.value = null;
+    }
+    
     container.value.style.cursor = 'auto';
   }
 };
