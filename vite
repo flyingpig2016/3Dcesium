@@ -1,0 +1,12 @@
+
+
+  VITE v6.3.2  ready in 3588 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  Vue DevTools: Open http://localhost:5173/__devtools__/ as a separate window
+  ➜  Vue DevTools: Press Option(⌥)+Shift(⇧)+D in App to toggle the Vue DevTools
+  ➜  press h + enter to show help
+6:45:57 PM [vite] (client) hmr update /src/components/3d/NetworkTopology.vue
+6:46:39 PM [vite] (client) hmr update /src/components/3d/NetworkTopology.vue (x2)
+6:50:04 PM [vite] (client) hmr update /src/views/Dashboard.vue, /src/components/3d/NetworkTopology.vue
