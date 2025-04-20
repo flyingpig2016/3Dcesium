@@ -371,8 +371,8 @@ const initScene = async () => {
   // Add lights
   // 1. Main ambient light - stronger in dark mode
   const ambientLight = new THREE.AmbientLight(
-    props.darkMode ? 0xffffff : 0x666666, 
-    props.darkMode ? 1.0 : 0.8 // Increased intensity for dark mode
+    props.darkMode ? 0xf0e6d2 : 0xcccccc, 
+    props.darkMode ? 0.7 : 0.6 // 更柔和的环境光
   );
   scene.value.add(ambientLight);
 
@@ -384,34 +384,56 @@ const initScene = async () => {
   directionalLight.shadow.mapSize.height = 2048;
   scene.value.add(directionalLight);
   
-  // 3. Additional soft light from bottom (only in dark mode) - helps with floor visibility
+  // 创建温暖氛围的灯光
   if (props.darkMode) {
-    const bottomLight = new THREE.HemisphereLight(0x8080ff, 0x404040, 0.5);
-    bottomLight.position.set(0, -10, 0);
-    scene.value.add(bottomLight);
-  }
-  
-  // 4. Add some point lights for the rooms in dark mode
-  if (props.darkMode) {
-    // Living room light
-    const livingRoomLight = new THREE.PointLight(0xffffe0, 0.7, 10);
-    livingRoomLight.position.set(0, 1.5, 0);
+    // 客厅主光源 - 温暖的橙黄色
+    const livingRoomLight = new THREE.PointLight(0xffbb77, 1.0, 10);
+    livingRoomLight.position.set(0, 2.2, 0);
+    livingRoomLight.castShadow = true;
     scene.value.add(livingRoomLight);
     
-    // Master bedroom light
-    const masterBedroomLight = new THREE.PointLight(0xffffe0, 0.5, 8);
-    masterBedroomLight.position.set(-5, 1.5, -6);
+    // 客厅柔光 - 装饰性光源
+    const livingRoomAccentLight = new THREE.SpotLight(0xffe0a8, 0.7, 8, Math.PI / 6, 0.5, 1);
+    livingRoomAccentLight.position.set(2, 2.5, 0);
+    livingRoomAccentLight.target.position.set(2, 0, 0);
+    scene.value.add(livingRoomAccentLight);
+    scene.value.add(livingRoomAccentLight.target);
+    
+    // 主卧室 - 柔和的蓝紫色调
+    const masterBedroomLight = new THREE.PointLight(0xb4c8ff, 0.7, 8);
+    masterBedroomLight.position.set(-5, 2.0, -6);
     scene.value.add(masterBedroomLight);
     
-    // Guest bedroom light
-    const guestBedroomLight = new THREE.PointLight(0xffffe0, 0.5, 8);
-    guestBedroomLight.position.set(5, 1.5, -6);
+    // 客卧 - 暖白色
+    const guestBedroomLight = new THREE.PointLight(0xfff0dd, 0.7, 8);
+    guestBedroomLight.position.set(5, 2.0, -6);
     scene.value.add(guestBedroomLight);
     
-    // Additional bedroom light
-    const bedroomLight = new THREE.PointLight(0xffffe0, 0.5, 8);
-    bedroomLight.position.set(0, 1.5, -6);
-    scene.value.add(bedroomLight);
+    // 客卧2 - 淡黄色调
+    const bedroom2Light = new THREE.PointLight(0xffeedd, 0.7, 8);
+    bedroom2Light.position.set(0, 2.0, -6);
+    scene.value.add(bedroom2Light);
+    
+    // 添加电视背光效果
+    const tvBacklight = new THREE.RectAreaLight(0x80a0ff, 2.0, 4, 1);
+    tvBacklight.position.set(0, 1.0, -0.5);
+    tvBacklight.lookAt(0, 1.0, 1);
+    scene.value.add(tvBacklight);
+    
+    // 添加底部轮廓光效果
+    const floorLight1 = new THREE.PointLight(0x6080ff, 0.5, 6);
+    floorLight1.position.set(-4, 0.1, 0);
+    scene.value.add(floorLight1);
+    
+    const floorLight2 = new THREE.PointLight(0xff8060, 0.5, 6);
+    floorLight2.position.set(4, 0.1, 0);
+    scene.value.add(floorLight2);
+    
+    // 添加随时间轻微变化的光效
+    const subtleLight = new THREE.PointLight(0xffffaa, 0.3, 12);
+    subtleLight.position.set(0, 3, -3);
+    subtleLight.userData = { phase: 0 }; // 为动画添加相位
+    scene.value.add(subtleLight);
   }
 
   // Create helper grid
@@ -452,10 +474,11 @@ const createRoomLayout = () => {
     color: 0xe8e8e8,
     transparent: false,
     opacity: 1.0,
-    roughness: 0.2,
-    metalness: 0.1,
+    roughness: 0.4,
+    metalness: 0.05,
     emissive: 0xd0d0d0,
-    emissiveIntensity: 0.05
+    emissiveIntensity: 0.05,
+    reflectivity: 0.2
   });
   
   const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -468,26 +491,30 @@ const createRoomLayout = () => {
   
   // Create wall material
   const wallMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xFFFFFF,
+    color: 0xF8F8F8,
     transparent: true,
     opacity: .9,
-    roughness: 0.1,
-    metalness: 0.1,
+    roughness: 0.2,
+    metalness: 0.05,
     transmission: 0.0,
-    reflectivity: 0.2,
+    reflectivity: 0.1,
+    clearcoat: 0.3,
+    clearcoatRoughness: 0.2,
     emissive: 0xf0f0f0,
     emissiveIntensity: 0.05
   });
   
   // 为房间指示器创建玻璃地板材质
   const glassMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xf5f5f5,
+    color: 0xfafafa,
     transparent: true,
     opacity: 0.7,
-    roughness: 0.1,
+    roughness: 0.05,
     metalness: 0.1,
-    transmission: 0.2,
-    reflectivity: 0.3,
+    transmission: 0.4,
+    reflectivity: 0.5,
+    clearcoat: 0.5,
+    clearcoatRoughness: 0.1,
     emissive: 0xffffff,
     emissiveIntensity: 0.05
   });
@@ -1561,6 +1588,47 @@ const animate = () => {
   // Update controls
   controls.value.update();
   
+  // Get current time for animations
+  const time = Date.now() * 0.001;
+  
+  // 更新随时间变化的光效
+  scene.value.traverse((object) => {
+    // 找到我们标记了相位的光源
+    if (object instanceof THREE.PointLight && object.userData && object.userData.phase !== undefined) {
+      // 缓慢呼吸效果
+      const intensity = 0.2 + Math.sin(time * 0.5 + object.userData.phase) * 0.1;
+      object.intensity = intensity;
+      
+      // 微妙的颜色变化
+      const hue = (Math.sin(time * 0.1) * 0.05 + 0.15) % 1.0; // 在黄色调范围内变化
+      const color = new THREE.Color().setHSL(hue, 0.7, 0.6);
+      object.color.copy(color);
+    }
+    
+    // 电视背光随时间变化
+    if (object instanceof THREE.RectAreaLight) {
+      // 模拟电视画面变化导致的光线变化
+      const tvHue = (time * 0.1) % 1.0;
+      const tvSaturation = 0.7 + Math.sin(time) * 0.3;
+      const tvColor = new THREE.Color().setHSL(tvHue, tvSaturation, 0.5);
+      object.color.copy(tvColor);
+      
+      // 强度微小波动
+      object.intensity = 1.8 + Math.sin(time * 2) * 0.4;
+    }
+    
+    // 底部轮廓光效果变化
+    if (object instanceof THREE.PointLight && 
+        (object.position.y < 0.2 && object.position.y > 0)) {
+      // 使红蓝光效交替呼吸
+      if (object.color.r > object.color.b) { // 红色光源
+        object.intensity = 0.4 + Math.sin(time * 1.5) * 0.2;
+      } else { // 蓝色光源
+        object.intensity = 0.4 + Math.sin(time * 1.5 + Math.PI) * 0.2; // 反相位
+      }
+    }
+  });
+  
   // Animate active connections
   connectionLines.value.forEach(line => {
     const device = networkStore.devices.find(d => d.id === line.deviceA);
@@ -1647,18 +1715,18 @@ watch(() => props.darkMode, (newMode) => {
       const floor = roomMeshes.value[0];
       // Create new material with updated color to avoid modifying the read-only one
       const newMaterial = floor.material.clone();
-      newMaterial.color.set(newMode ? 0x3a3a3a : 0xe0e0e0);
-      newMaterial.emissive.set(newMode ? 0x202020 : 0x000000);
-      newMaterial.emissiveIntensity = newMode ? 0.2 : 0;
+      newMaterial.color.set(newMode ? 0x353540 : 0xecece8);
+      newMaterial.emissive.set(newMode ? 0x202030 : 0x000000);
+      newMaterial.emissiveIntensity = newMode ? 0.15 : 0;
       floor.material = newMaterial;
       
       // Update all wall materials
       for (let i = 1; i < roomMeshes.value.length; i++) {
         const mesh = roomMeshes.value[i];
         const newWallMaterial = mesh.material.clone();
-        newWallMaterial.color.set(newMode ? 0x6e6e6e : 0xd4d4d4);
-        newWallMaterial.emissive.set(newMode ? 0x222222 : 0x000000);
-        newWallMaterial.emissiveIntensity = newMode ? 0.1 : 0;
+        newWallMaterial.color.set(newMode ? 0x3a3a48 : 0xe8e8e8);
+        newWallMaterial.emissive.set(newMode ? 0x22223a : 0x000000);
+        newWallMaterial.emissiveIntensity = newMode ? 0.15 : 0;
         mesh.material = newWallMaterial;
       }
     }
@@ -1672,7 +1740,10 @@ watch(() => props.darkMode, (newMode) => {
     // First, find and remove all point and hemisphere lights
     const lightsToRemove = [];
     scene.value.traverse((object) => {
-      if (object instanceof THREE.PointLight || object instanceof THREE.HemisphereLight) {
+      if (object instanceof THREE.PointLight || 
+          object instanceof THREE.HemisphereLight ||
+          object instanceof THREE.SpotLight ||
+          object instanceof THREE.RectAreaLight) {
         lightsToRemove.push(object);
       }
     });
@@ -1684,31 +1755,64 @@ watch(() => props.darkMode, (newMode) => {
     // Update ambient light
     scene.value.traverse((object) => {
       if (object instanceof THREE.AmbientLight) {
-        object.intensity = newMode ? 1.0 : 0.8;
+        object.color.set(newMode ? 0xf0e6d2 : 0xcccccc);
+        object.intensity = newMode ? 0.7 : 0.6;
+      }
+      if (object instanceof THREE.DirectionalLight) {
+        object.intensity = newMode ? 0.8 : 1.0;
       }
     });
     
     // Add new lights for dark mode if needed
     if (newMode) {
-      // Bottom hemisphere light for dark mode
-      const bottomLight = new THREE.HemisphereLight(0x8080ff, 0x404040, 0.5);
-      bottomLight.position.set(0, -10, 0);
-      scene.value.add(bottomLight);
+      // 客厅主光源 - 温暖的橙黄色
+      const livingRoomLight = new THREE.PointLight(0xffbb77, 1.0, 10);
+      livingRoomLight.position.set(0, 2.2, 0);
+      livingRoomLight.castShadow = true;
+      scene.value.add(livingRoomLight);
       
-      // Room point lights
-      const roomPositions = [
-        {x: 0, y: 1.5, z: 0}, // Living room
-        {x: -5, y: 1.5, z: -6}, // Master bedroom
-        {x: 5, y: 1.5, z: -6}, // Guest bedroom
-        {x: 0, y: 1.5, z: -6} // 客卧
-      ];
+      // 客厅柔光 - 装饰性光源
+      const livingRoomAccentLight = new THREE.SpotLight(0xffe0a8, 0.7, 8, Math.PI / 6, 0.5, 1);
+      livingRoomAccentLight.position.set(2, 2.5, 0);
+      livingRoomAccentLight.target.position.set(2, 0, 0);
+      scene.value.add(livingRoomAccentLight);
+      scene.value.add(livingRoomAccentLight.target);
       
-      roomPositions.forEach((pos, index) => {
-        const intensity = index === 0 ? 0.7 : 0.5; // Living room slightly brighter
-        const light = new THREE.PointLight(0xffffe0, intensity, 8);
-        light.position.set(pos.x, pos.y, pos.z);
-        scene.value.add(light);
-      });
+      // 主卧室 - 柔和的蓝紫色调
+      const masterBedroomLight = new THREE.PointLight(0xb4c8ff, 0.7, 8);
+      masterBedroomLight.position.set(-5, 2.0, -6);
+      scene.value.add(masterBedroomLight);
+      
+      // 客卧 - 暖白色
+      const guestBedroomLight = new THREE.PointLight(0xfff0dd, 0.7, 8);
+      guestBedroomLight.position.set(5, 2.0, -6);
+      scene.value.add(guestBedroomLight);
+      
+      // 客卧2 - 淡黄色调
+      const bedroom2Light = new THREE.PointLight(0xffeedd, 0.7, 8);
+      bedroom2Light.position.set(0, 2.0, -6);
+      scene.value.add(bedroom2Light);
+      
+      // 添加电视背光效果
+      const tvBacklight = new THREE.RectAreaLight(0x80a0ff, 2.0, 4, 1);
+      tvBacklight.position.set(0, 1.0, -0.5);
+      tvBacklight.lookAt(0, 1.0, 1);
+      scene.value.add(tvBacklight);
+      
+      // 添加底部轮廓光效果
+      const floorLight1 = new THREE.PointLight(0x6080ff, 0.5, 6);
+      floorLight1.position.set(-4, 0.1, 0);
+      scene.value.add(floorLight1);
+      
+      const floorLight2 = new THREE.PointLight(0xff8060, 0.5, 6);
+      floorLight2.position.set(4, 0.1, 0);
+      scene.value.add(floorLight2);
+      
+      // 添加随时间轻微变化的光效
+      const subtleLight = new THREE.PointLight(0xffffaa, 0.3, 12);
+      subtleLight.position.set(0, 3, -3);
+      subtleLight.userData = { phase: 0 }; // 为动画添加相位
+      scene.value.add(subtleLight);
     }
   }
 }, { deep: true });
