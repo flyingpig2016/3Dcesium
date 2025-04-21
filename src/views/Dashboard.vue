@@ -19,18 +19,18 @@
 
       <!-- Side Panel -->
       <aside class="side-panel glass-panel">
-        <h2>Network Statistics</h2>
+        <h2>拓扑统计</h2>
         <div class="stats-container">
           <div class="stat-item">
-            <span class="stat-label">Connected Devices</span>
+            <span class="stat-label">连接设备</span>
             <span class="stat-value">{{ connectedDevices }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Active Connections</span>
+            <span class="stat-label">活跃连接</span>
             <span class="stat-value">{{ activeConnections }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Network Load</span>
+            <span class="stat-label">网络负载</span>
             <div class="progress-bar">
               <div class="progress" :style="{ width: networkLoad + '%', backgroundColor: loadColor }"></div>
             </div>
@@ -38,7 +38,7 @@
           </div>
         </div>
 
-        <h2>Device List</h2>
+        <h2>设备列表</h2>
         <div class="device-list">
           <div 
             v-for="device in devices" 

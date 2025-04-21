@@ -2,6 +2,13 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 
 export const useNetworkStore = defineStore('network', () => {
+  // 连接线类型定义
+  const CONNECTION_TYPES = {
+    SOLID: 'solid',     // 实线
+    DASHED: 'dashed',   // 虚线
+    FIBER: 'fiber'      // 光纤线(黄色)
+  };
+
   // State
   const devices = ref([
     {
@@ -10,7 +17,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'tv',
       status: 'online',
       active: true,
-      // connections: ['fttr'],
+      connections: [{target: 'stb1', lineType: CONNECTION_TYPES.SOLID}],
       position: { x: -6, y: .3, z: 0 }
     },
     {
@@ -19,7 +26,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'livingcomputer',
       status: 'idle',
       active: true,
-      connections: ['fttr'],
+      connections: [{target: 'fttr', lineType: CONNECTION_TYPES.FIBER}],
       position: { x: -7, y: 1, z: -6 }
     },
     {
@@ -28,8 +35,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'stb',
       status: 'online',
       active: true,
-      connections: ['fttr', 'tv1'],
-      // connections: ['fttr'],
+      connections: [{target: 'fttr', lineType: CONNECTION_TYPES.FIBER}, {target: 'tv1', lineType: CONNECTION_TYPES.SOLID}],
       position: { x: -5.5, y: .3, z: -2.2 }
     },
     {
@@ -38,7 +44,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'print',
       status: 'offline',
       active: true,
-      connections: ['fttr'],
+      connections: [{target: 'fttr', lineType: CONNECTION_TYPES.FIBER}],
       position: { x: 6, y: 0, z: -1 }
     },
     {
@@ -47,7 +53,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'ac',
       status: 'online',
       active: true,
-      connections: ['router1'],
+      connections: [{target: 'router1', lineType: CONNECTION_TYPES.DASHED}],
       position: { x: 6, y: 2, z: -3.5 }
     },
     {
@@ -56,7 +62,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'ac',
       status: 'online',
       active: true,
-      connections: ['router1'],
+      connections: [{target: 'router1', lineType: CONNECTION_TYPES.DASHED}],
       position: { x: 0, y: 2, z: -8.5 }
     },
     {
@@ -65,7 +71,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'ac',
       status: 'offline',
       active: true,
-      connections: ['router1'],
+      connections: [{target: 'router1', lineType: CONNECTION_TYPES.DASHED}],
       position: { x: 5, y: 2, z: -8.5 }
     },
     {
@@ -74,7 +80,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'pc',
       status: 'online',
       active: true,
-      connections: ['router1'],
+      connections: [{target: 'router1', lineType: CONNECTION_TYPES.DASHED}],
       position: { x: 5, y: 0.3, z: -8 }
     },
     {
@@ -83,7 +89,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'security_camera',
       status: 'online',
       active: true,
-      connections: ['fttr'],
+      connections: [{target: 'fttr', lineType: CONNECTION_TYPES.FIBER}],
       position: { x: -1, y: 2.2, z: -2.5 }
     },
     {
@@ -92,7 +98,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'light',
       status: 'online',
       active: true,
-      connections: ['fttr'],
+      connections: [{target: 'router1', lineType: CONNECTION_TYPES.DASHED}],
       position: { x: 0, y: 0.3, z: 2 }
     },
     {
@@ -101,7 +107,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'vacuum',
       status: 'online',
       active: true,
-      connections: ['router1'],
+      connections: [{target: 'router1', lineType: CONNECTION_TYPES.DASHED}],
       position: { x: 3, y: 0.1, z: -2 }
     },
     {
@@ -110,7 +116,7 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'router',
       status: 'online',
       active: true,
-      connections: ['fttr'],
+      connections: [{target: 'fttr', lineType: CONNECTION_TYPES.FIBER}],
       position: { x: 1, y: -2, z: -7.7 }
     },
     // {
@@ -174,6 +180,7 @@ export const useNetworkStore = defineStore('network', () => {
   };
 
   return {
+    CONNECTION_TYPES,
     devices,
     connectedDevices,
     activeConnections,

@@ -1,5 +1,24 @@
 <template>
-  <div class="topology-container" ref="container">
+  <div class="network-topology-container">
+    <div class="rendering-container" ref="container"></div>
+    
+    <!-- 连接线图例 -->
+    <div class="topology-legend">
+      <div class="legend-title">连接线类型</div>
+      <div class="legend-item">
+        <div class="legend-line solid-line"></div>
+        <div class="legend-text">实线 - 有线连接</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line dashed-line"></div>
+        <div class="legend-text">虚线 - 无线连接</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line fiber-line"></div>
+        <div class="legend-text">光纤线 - 高速连接</div>
+      </div>
+    </div>
+    
     <!-- Tooltip -->
     <div 
       v-if="tooltipVisible" 
@@ -1227,7 +1246,11 @@ const createConnections = () => {
   // For each device, create its connections
   networkStore.devices.forEach(device => {
     if (device.connections) {
-      device.connections.forEach(connId => {
+      device.connections.forEach(connection => {
+        // 获取连接目标ID和线类型
+        const connId = connection.target;
+        const lineType = connection.lineType || networkStore.CONNECTION_TYPES.SOLID; // 默认为实线
+
         // Get the source device object
         const sourceDevice = deviceMeshes.value[device.id];
         // Get the target device object
@@ -1277,31 +1300,76 @@ const createConnections = () => {
         const points = curve.getPoints(50);
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         
-        // Set color based on device activity
-        const color = new THREE.Color(device.active ? 0x06d6a0 : 0x767676);
+        // 根据连接线类型设置颜色和材质
+        let color, mainLineMaterial, outerGlowMaterial;
         
-        // Create a thicker glowing line with multiple layers for better effect
-        // Main line - thicker and more opaque
-        const mainLineMaterial = new THREE.LineBasicMaterial({
-          color: color,
-          transparent: true,
-          opacity: 0.9,
-          linewidth: 3 // Note: linewidth > 1 may not work in all browsers due to WebGL limitations
-        });
+        if (lineType === networkStore.CONNECTION_TYPES.FIBER) {
+          // 光纤线 - 黄色实线
+          color = new THREE.Color(device.active ? 0xffd700 : 0x767676); // 金黄色
+          mainLineMaterial = new THREE.LineBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.9,
+            linewidth: 3
+          });
+          outerGlowMaterial = new THREE.LineBasicMaterial({
+            color: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.5),
+            transparent: true,
+            opacity: 0.6,
+            linewidth: 1
+          });
+        } else if (lineType === networkStore.CONNECTION_TYPES.DASHED) {
+          // 虚线
+          color = new THREE.Color(device.active ? 0x06d6a0 : 0x767676);
+          // 创建虚线效果
+          mainLineMaterial = new THREE.LineDashedMaterial({
+            color: color,
+            dashSize: 0.3,
+            gapSize: 0.2,
+            transparent: true,
+            opacity: 0.9,
+            linewidth: 2
+          });
+          outerGlowMaterial = new THREE.LineDashedMaterial({
+            color: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.5),
+            dashSize: 0.3,
+            gapSize: 0.2,
+            transparent: true,
+            opacity: 0.4,
+            linewidth: 1
+          });
+        } else {
+          // 默认实线
+          color = new THREE.Color(device.active ? 0x06d6a0 : 0x767676);
+          mainLineMaterial = new THREE.LineBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.9,
+            linewidth: 3
+          });
+          outerGlowMaterial = new THREE.LineBasicMaterial({
+            color: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.5),
+            transparent: true,
+            opacity: 0.4,
+            linewidth: 1
+          });
+        }
         
         const mainLine = new THREE.Line(geometry.clone(), mainLineMaterial);
         scene.value.add(mainLine);
         
-        // Outer glow - wider and more transparent
-        const outerGlowMaterial = new THREE.LineBasicMaterial({
-          color: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.5), // Lighter color for glow
-          transparent: true,
-          opacity: 0.4,
-          linewidth: 1
-        });
+        // 如果是虚线，需要计算线段长度
+        if (lineType === networkStore.CONNECTION_TYPES.DASHED) {
+          mainLine.computeLineDistances();
+        }
         
         const outerGlow = new THREE.Line(geometry.clone(), outerGlowMaterial);
         scene.value.add(outerGlow);
+        
+        // 如果是虚线，同样需要计算外发光线段长度
+        if (lineType === networkStore.CONNECTION_TYPES.DASHED) {
+          outerGlow.computeLineDistances();
+        }
         
         // Add data packets for active connections
         const packets = [];
@@ -1389,6 +1457,7 @@ const createConnections = () => {
           packetCurve: packetCurve,
           deviceA: device.id,
           deviceB: connId,
+          lineType: lineType,
           originalColor: color.clone(),
           active: device.active,
           packets: packets,
@@ -1405,7 +1474,7 @@ const createConnections = () => {
 // Helper function to create a data packet
 const createDataPacket = (curve, color, packetsArray) => {
   // Create the packet geometry
-  const packetGeometry = new THREE.SphereGeometry(0.12, 10, 10); // Slightly larger packets
+  const packetGeometry = new THREE.SphereGeometry(0.06, 8, 8); // Slightly larger packets
   
   // Create a glowing material for the packet
   const packetMaterial = new THREE.MeshStandardMaterial({
@@ -2153,55 +2222,129 @@ const createWaterRipple = (device) => {
 </script>
 
 <style scoped>
-.topology-container {
+/* Network Topology specific styling */
+.network-topology-container {
   width: 100%;
   height: 100%;
   position: relative;
   overflow: hidden;
-  flex: 1;
 }
 
+.rendering-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Legend styling */
+.topology-legend {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  padding: 12px;
+  color: white;
+  font-size: 14px;
+  z-index: 100;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 10px;
+  text-align: center;
+  font-size: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 5px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.legend-line {
+  width: 30px;
+  height: 3px;
+  margin-right: 10px;
+}
+
+.solid-line {
+  background-color: #06d6a0;
+  box-shadow: 0 0 5px rgba(6, 214, 160, 0.8);
+}
+
+.dashed-line {
+  background: repeating-linear-gradient(
+    to right,
+    #06d6a0 0%,
+    #06d6a0 50%,
+    transparent 50%,
+    transparent 100%
+  );
+  background-size: 8px 100%;
+  box-shadow: 0 0 5px rgba(6, 214, 160, 0.8);
+}
+
+.fiber-line {
+  background-color: #ffd700;
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.8);
+}
+
+.legend-text {
+  font-size: 14px;
+}
+
+/* Tooltip styles */
 .tooltip {
   position: absolute;
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: 6px;
-  border: 1px solid var(--glass-border);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
   padding: 10px;
-  min-width: 150px;
-  max-width: 250px;
-  z-index: 10;
-  box-shadow: var(--glass-shadow);
-  transition: opacity 0.2s ease;
-  color: var(--text-light);
+  border-radius: 8px;
+  font-size: 14px;
+  max-width: 280px;
+  z-index: 1000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  transform: translate(15px, -50%);
 }
 
 .tooltip-title {
-  font-weight: 600;
+  font-weight: bold;
   margin-bottom: 5px;
+  font-size: 16px;
+  color: #fff;
 }
 
 .tooltip-status {
-  font-size: 0.875rem;
   margin-bottom: 5px;
+  font-size: 14px;
 }
 
 .status-online {
-  color: var(--success);
-}
-
-.status-offline {
-  color: var(--danger);
+  color: #06d6a0;
+  font-weight: bold;
 }
 
 .status-idle {
-  color: var(--warning);
+  color: #ffb703;
+  font-weight: bold;
+}
+
+.status-offline {
+  color: #ef476f;
+  font-weight: bold;
 }
 
 .tooltip-details {
-  font-size: 0.875rem;
-  opacity: 0.8;
+  font-size: 13px;
+  color: #ccc;
 }
 
 :deep(.room-label) {
@@ -2278,20 +2421,20 @@ const createWaterRipple = (device) => {
   }
 }
 
-/* 调试面板样式 */
+/* Debug panel styles */
 .debug-panel {
   position: absolute;
-  top: 10px;
   right: 10px;
-  background: rgba(30, 30, 30, 0.85);
-  color: white;
+  top: 10px;
+  background-color: rgba(20, 20, 20, 0.9);
   border-radius: 8px;
-  width: 300px;
-  max-height: 80vh;
-  overflow-y: auto;
   padding: 15px;
-  z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  width: 300px;
+  color: white;
+  z-index: 1000;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .debug-header {
@@ -2299,54 +2442,74 @@ const createWaterRipple = (device) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
-  padding-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 10px;
 }
 
 .debug-header h3 {
   margin: 0;
+  font-size: 18px;
 }
 
 .close-btn {
-  background: none;
+  background: transparent;
   border: none;
   color: white;
   font-size: 20px;
   cursor: pointer;
 }
 
+.debug-content {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 .form-group {
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 
 .form-group select,
 .form-group input {
-  width: 100%;
-  padding: 6px 8px;
-  background: rgba(40, 40, 40, 0.9);
+  background-color: rgba(60, 60, 60, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
   color: white;
+  padding: 6px 8px;
+  border-radius: 4px;
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+.form-group input[type="range"] {
+  width: 70%;
+  display: inline-block;
 }
 
 .form-group input[type="number"] {
-  width: 70px;
-  margin-left: 10px;
+  width: 25%;
+  display: inline-block;
+  margin-left: 5%;
 }
 
-.reset-btn,
-.apply-btn {
+.debug-content h4 {
+  font-size: 16px;
+  margin: 15px 0 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 5px;
+}
+
+.reset-btn, .apply-btn {
   padding: 8px 16px;
-  margin: 15px 10px 5px 0;
   border: none;
   border-radius: 4px;
-  font-weight: 500;
+  margin-right: 10px;
   cursor: pointer;
+  font-weight: 500;
+  margin-top: 15px;
 }
 
 .reset-btn {
