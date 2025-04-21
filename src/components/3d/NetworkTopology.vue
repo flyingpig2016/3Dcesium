@@ -362,7 +362,7 @@ const initScene = async () => {
     0.1,
     1000
   );
-  camera.value.position.set(10, 10, 10);
+  camera.value.position.set(10, 15, 10);
   camera.value.lookAt(0, 0, 0);
 
   // Create renderer
@@ -900,7 +900,7 @@ const createDevices = () => {
     // Add user data for interaction
     routerModel.userData = { 
       type: 'fttr',
-      name: 'FTTR Gateway',
+      name: 'FTTR 网关',
       status: 'online',
       details: 'Central network gateway',
       isModel: true,
@@ -912,7 +912,7 @@ const createDevices = () => {
     meshes['fttr'] = routerModel;
     
     // Add label
-    addDeviceLabel('FTTR Gateway', routerModel, 0.5); // 调整标签高度
+    addDeviceLabel('FTTR 网关', routerModel, 0.5); // 调整标签高度
     
     // Add title
     addFTTRTitle(routerModel);
@@ -937,7 +937,7 @@ const createDevices = () => {
     
     fttr.userData = { 
       type: 'fttr',
-      name: 'FTTR Gateway',
+      name: 'FTTR 网关',
       status: 'online',
       details: 'Central network gateway',
       rippleEffect: ripples
@@ -946,7 +946,7 @@ const createDevices = () => {
     meshes['fttr'] = fttr;
     
     // Add fttr label
-    addDeviceLabel('FTTR Gateway', fttr, 0.5); // 调整标签高度
+    addDeviceLabel('FTTR 网关', fttr, 0.5); // 调整标签高度
     
     // Add title
     addFTTRTitle(fttr);
@@ -1231,7 +1231,7 @@ const addFTTRTitle = (parent) => {
   if (parent.userData && parent.userData.isModel) {
     const box = new THREE.Box3().setFromObject(parent);
     const height = box.max.y - box.min.y;
-    titleLabel.position.set(0, height + 5, 0); // Position higher than regular label
+    titleLabel.position.set(0, height + 4, 0); // Position higher than regular label
   } else {
     titleLabel.position.set(0, 2.5, 0);
   }
@@ -1378,7 +1378,7 @@ const createConnections = () => {
         const packets = [];
         
         // Always use fttr as the source for packet animation regardless of connection direction
-        // This makes all packets originate from the FTTR gateway
+        // This makes all packets originate from the FTTR 网关
         let packetStartPosition, packetEndPosition, routerIsSource;
         
         // Determine if fttr is the source or target of this connection
@@ -1688,6 +1688,8 @@ const highlightDevice = (deviceId) => {
 
 // Reset highlights
 const resetHighlights = () => {
+  if (!scene.value) return;
+  
   // Reset all device scales
   Object.values(deviceMeshes.value).forEach(mesh => {
     if (mesh.userData && mesh.userData.isModel) {
@@ -1709,23 +1711,43 @@ const resetHighlights = () => {
     }
   });
   
-  // Reset connection colors and packet speeds
+  // If we're not highlighting any device, we still need to ensure the correct 
+  // color is used for each line based on its type
   connectionLines.value.forEach(line => {
     const device = networkStore.devices.find(d => d.id === line.deviceA);
     if (device && device.active) {
-      // Reset main line
-      line.mesh.material.color.set(new THREE.Color(0x06d6a0));
-      line.mesh.material.opacity = 0.9;
-      
-      // Reset glow line
-      line.glowMesh.material.color.set(new THREE.Color(0x06d6a0).lerp(new THREE.Color(0xffffff), 0.5));
-      line.glowMesh.material.opacity = 0.4;
+      // 根据线条类型使用固定颜色
+      if (line.lineType === networkStore.CONNECTION_TYPES.FIBER) {
+        // 光纤线 - 黄色
+        line.mesh.material.color.set(new THREE.Color(0xffd700));
+        line.mesh.material.opacity = 0.9;
+        
+        // 发光线
+        line.glowMesh.material.color.set(new THREE.Color(0xffd700).lerp(new THREE.Color(0xffffff), 0.5));
+        line.glowMesh.material.opacity = 0.6;
+      } else if (line.lineType === networkStore.CONNECTION_TYPES.DASHED) {
+        // 虚线 - 绿色
+        line.mesh.material.color.set(new THREE.Color(0x06d6a0));
+        line.mesh.material.opacity = 0.9;
+        
+        // 发光线
+        line.glowMesh.material.color.set(new THREE.Color(0x06d6a0).lerp(new THREE.Color(0xffffff), 0.5));
+        line.glowMesh.material.opacity = 0.4;
+      } else {
+        // 默认实线 - 绿色
+        line.mesh.material.color.set(new THREE.Color(0x06d6a0));
+        line.mesh.material.opacity = 0.9;
+        
+        // 发光线
+        line.glowMesh.material.color.set(new THREE.Color(0x06d6a0).lerp(new THREE.Color(0xffffff), 0.5));
+        line.glowMesh.material.opacity = 0.4;
+      }
     } else {
-      // Reset inactive connection
-      line.mesh.material.color.set(line.originalColor);
+      // 非活跃连接使用灰色
+      line.mesh.material.color.set(new THREE.Color(0x767676));
       line.mesh.material.opacity = 0.3;
       
-      line.glowMesh.material.color.set(line.originalColor.clone().lerp(new THREE.Color(0xffffff), 0.5));
+      line.glowMesh.material.color.set(new THREE.Color(0x767676).lerp(new THREE.Color(0xffffff), 0.5));
       line.glowMesh.material.opacity = 0.1;
     }
     
@@ -1734,7 +1756,12 @@ const resetHighlights = () => {
       line.packets.forEach(packet => {
         // Only adjust properties of visible packets
         if (packet.visible) {
-          packet.material.emissive.copy(line.originalColor);
+          // 根据线条类型设置数据包的颜色
+          if (line.lineType === networkStore.CONNECTION_TYPES.FIBER) {
+            packet.material.emissive.set(0xffd700);
+          } else {
+            packet.material.emissive.set(0x06d6a0);
+          }
           packet.material.emissiveIntensity = 1.2;
           // Reset packet speed to original
           packet.userData.speed = 0.004 + Math.random() * 0.006;
@@ -1869,13 +1896,18 @@ const animate = () => {
       const glowPulse = Math.sin(time * 3 + 0.5) * 0.3 + 0.7;
       line.glowMesh.material.opacity = glowPulse * 0.6;
       
-      // Animate color flow effect on the glow line
-      const flowColor = new THREE.Color().setHSL(
-        (Math.sin(time * 0.2) * 0.1 + 0.5) % 1.0, // Hue - subtly shifts
-        0.7, // Saturation
-        0.6  // Lightness
-      );
-      line.glowMesh.material.color.lerp(flowColor, 0.05);
+      // 移除颜色流动效果，使用固定颜色
+      // 为不同类型的线使用固定颜色
+      if (line.lineType === networkStore.CONNECTION_TYPES.FIBER) {
+        // 光纤线固定为黄色
+        line.glowMesh.material.color.set(new THREE.Color(0xffd700).lerp(new THREE.Color(0xffffff), 0.5));
+      } else if (line.lineType === networkStore.CONNECTION_TYPES.DASHED) {
+        // 虚线固定为绿色
+        line.glowMesh.material.color.set(new THREE.Color(0x06d6a0).lerp(new THREE.Color(0xffffff), 0.5));
+      } else {
+        // 实线固定为绿色
+        line.glowMesh.material.color.set(new THREE.Color(0x06d6a0).lerp(new THREE.Color(0xffffff), 0.5));
+      }
       
       // Animate data packets along the curve
       if (showAnimation.value && line.packets && line.packets.length > 0) {
@@ -1900,8 +1932,8 @@ const animate = () => {
           packet.scale.set(packetPulse, packetPulse, packetPulse);
           packet.material.opacity = packetPulse + 0.2;
           
-          // Make the packet emit light effect
-          packet.material.emissiveIntensity = 1.0 + Math.sin(time * 12) * 0.3;
+          // 使用固定的发光强度，不再随时间变化
+          packet.material.emissiveIntensity = 1.2;
         });
       } else if (line.packets) {
         // Hide packets if animation is disabled
