@@ -885,7 +885,7 @@ const createDevices = () => {
     const routerModel = loadedModels.value['fttr'].scene.clone();
     
     // Scale and position appropriately - adjust scale for new model
-    const routerScale = .5; // 按实际大小，路由器比例提高
+    const routerScale = .8; // 按实际大小，路由器比例提高
     routerModel.scale.set(routerScale, routerScale, routerScale);
     routerModel.position.set(0, 5, -4);
     routerModel.rotation.y = Math.PI / 2;
@@ -1011,8 +1011,6 @@ const createDevices = () => {
           break;
         case 'pc':
           scale = 2; // 电脑
-          // model.position.y = 1; // 调整高度
-          // model.rotation.z = -Math.PI / 2;
           break;
         case 'speaker':
           scale = .8; // 音箱尺寸 (约0.3-0.4米高)
@@ -1026,7 +1024,6 @@ const createDevices = () => {
           else if (devicePosition.x < 0) model.rotation.y = -Math.PI / 2;
           else if (devicePosition.z > 0) model.rotation.y = Math.PI;
           break;
-        case 'pc':
         case 'office_pc':
           scale = 0.2; // 电脑尺寸 (约0.4-0.5米高)
           model.position.y = 0.2; // 调整高度
@@ -1040,6 +1037,9 @@ const createDevices = () => {
           scale = 1;
           model.position.y = -2;
           break;
+        case 'fttr':
+          scale = .5;
+          break; 
         default:
           scale = 1;
           model.position.y = 0.2; // 调整默认高度
@@ -1176,6 +1176,9 @@ const addDeviceLabel = (text, parent, offsetY = 0.5) => {
     label.position.set(0, 1.1, 0);
   } else if (parent.userData && parent.userData.id === 'tv2') {
     // 电脑特殊处理
+    label.position.set(0, 0.5, 0);
+  }else if (parent.userData && parent.userData.id === 'router1') {
+    // 打印机特殊处理
     label.position.set(0, 0.5, 0);
   } else if (parent.userData && parent.userData.isModel) {
     // 其他模型，按原来的逻辑处理
@@ -2139,6 +2142,9 @@ const createWaterRipple = (device) => {
   
   // Position the ripple group
   rippleGroup.position.copy(devicePosition);
+  
+  // 特殊偏移: 将水波纹放置在客厅位置
+  rippleGroup.position.z = -2.8;
   
   // Create multiple ripple rings with different sizes and speeds
   const rippleCount = 4;

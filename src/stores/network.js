@@ -112,12 +112,21 @@ export const useNetworkStore = defineStore('network', () => {
     },
     {
       id: 'router1',
-      name: 'WIFI',
+      name: '路由器',
       type: 'router',
       status: 'online',
       active: true,
       connections: [{target: 'fttr', lineType: CONNECTION_TYPES.FIBER}],
-      position: { x: 1, y: -2, z: -7.7 }
+      position: { x: 1, y: -2, z: -6.5 }
+    },
+    {
+      id: 'fttr2',
+      name: 'FTTR从光猫',
+      type: 'fttr',
+      status: 'online',
+      active: true,
+      connections: [{target: 'fttr', lineType: CONNECTION_TYPES.FIBER}],
+      position: { x: 3, y: 5, z: -4 }
     },
     // {
     //   id: 'light2',
