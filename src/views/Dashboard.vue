@@ -14,6 +14,7 @@
       <!-- 3D Visualization Container -->
       <NetworkTopology 
         :dark-mode="darkMode" 
+        :selected-device-id="selectedDevice"
         @device-selected="selectDevice"
       />
 
@@ -127,7 +128,7 @@ const loadColor = computed(() => {
 
 const selectedDeviceInfo = computed(() => {
   if (!selectedDevice.value) return {};
-  return devices.value.find(d => d.id === selectedDevice.value) || {};
+  return devices.find(d => d.id === selectedDevice.value) || {};
 });
 
 // Methods

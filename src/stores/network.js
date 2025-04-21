@@ -22,7 +22,7 @@ export const useNetworkStore = defineStore('network', () => {
     },
     {
       id: 'tv2',
-      name: '电脑',
+      name: '主卧电脑',
       type: 'livingcomputer',
       status: 'idle',
       active: true,
@@ -49,7 +49,7 @@ export const useNetworkStore = defineStore('network', () => {
     },
     {
       id: 'ac1',
-      name: '空调',
+      name: '客厅空调',
       type: 'ac',
       status: 'online',
       active: true,
@@ -58,7 +58,7 @@ export const useNetworkStore = defineStore('network', () => {
     },
     {
       id: 'ac2',
-      name: '空调',
+      name: '客卧空调1',
       type: 'ac',
       status: 'online',
       active: true,
@@ -67,7 +67,7 @@ export const useNetworkStore = defineStore('network', () => {
     },
     {
       id: 'ac3',
-      name: '空调',
+      name: '客卧空调2',
       type: 'ac',
       status: 'offline',
       active: true,
@@ -76,7 +76,7 @@ export const useNetworkStore = defineStore('network', () => {
     },
     {
       id: 'pc1',
-      name: '电脑',
+      name: '客卧电脑',
       type: 'pc',
       status: 'online',
       active: true,

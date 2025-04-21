@@ -121,6 +121,10 @@ const props = defineProps({
   darkMode: {
     type: Boolean,
     default: true
+  },
+  selectedDeviceId: {
+    type: String,
+    default: null
   }
 });
 
@@ -1623,7 +1627,9 @@ const onMouseClick = (event) => {
   
   if (intersects.length > 0) {
     const device = intersects[0].object;
-    emit('deviceSelected', device.userData.id);
+    const deviceId = device.userData.id;
+    emit('deviceSelected', deviceId);
+    // No need to call focusOnDevice here as it will be triggered by the watch on selectedDeviceId
   }
 };
 
@@ -2257,6 +2263,81 @@ const createWaterRipple = (device) => {
   
   return rippleGroup;
 };
+
+// Highlight and focus on a selected device
+const focusOnDevice = (deviceId) => {
+  if (!deviceId || !deviceMeshes.value[deviceId]) return;
+  
+  // Reset previous highlights
+  if (currentHighlightedDeviceId.value) {
+    resetHighlights();
+  }
+  
+  // Highlight the device
+  highlightDevice(deviceId);
+  currentHighlightedDeviceId.value = deviceId;
+  
+  // Focus camera on device
+  const device = deviceMeshes.value[deviceId];
+  if (device) {
+    // Get device position
+    let targetPosition;
+    if (device.userData && device.userData.isModel) {
+      const box = new THREE.Box3().setFromObject(device);
+      targetPosition = new THREE.Vector3();
+      box.getCenter(targetPosition);
+    } else {
+      targetPosition = device.position.clone();
+    }
+    
+    // Animate camera to look at device
+    const startPosition = camera.value.position.clone();
+    const endPosition = new THREE.Vector3(
+      targetPosition.x + 5,
+      targetPosition.y + 5,
+      targetPosition.z + 5
+    );
+    
+    // Set up animation
+    const duration = 1000; // ms
+    const startTime = Date.now();
+    
+    const animateCamera = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Use easing function for smoother animation
+      const easeProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease-out
+      
+      // Interpolate camera position
+      camera.value.position.lerpVectors(startPosition, endPosition, easeProgress);
+      
+      // Make camera look at the target
+      camera.value.lookAt(targetPosition);
+      
+      // Update controls target so orbiting works correctly after animation
+      if (progress === 1) {
+        controls.value.target.copy(targetPosition);
+      } else {
+        requestAnimationFrame(animateCamera);
+      }
+    };
+    
+    // Start animation
+    animateCamera();
+  }
+};
+
+// Watch for changes to selectedDeviceId prop
+watch(() => props.selectedDeviceId, (newDeviceId) => {
+  if (newDeviceId) {
+    focusOnDevice(newDeviceId);
+  } else if (currentHighlightedDeviceId.value) {
+    // If selection is cleared, reset highlights
+    resetHighlights();
+    currentHighlightedDeviceId.value = null;
+  }
+});
 </script>
 
 <style scoped>
