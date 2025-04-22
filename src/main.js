@@ -6,10 +6,13 @@ import App from './App.vue'
 
 // Import views
 import Dashboard from './views/Dashboard.vue'
+import Cesium from './views/Cesium.vue'
 
 // Configure routes
 const routes = [
-  { path: '/', component: Dashboard }
+  { path: '/', component: Dashboard },
+  { path: '/cesium', component: Cesium },
+  
 ]
 
 // Create router
