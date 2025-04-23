@@ -11,6 +11,10 @@
       <div class="coordinate-input">
         <h4>手动添加坐标点</h4>
         <div class="input-group">
+          <label>经纬度:</label>
+          <input type="text" v-model="combinedCoordinates" placeholder="116.4074,39.9042" />
+        </div>
+        <div class="input-group">
           <label>经度:</label>
           <input type="number" v-model="manualLongitude" placeholder="116.4074" step="0.0001" />
         </div>
@@ -25,18 +29,45 @@
         <button @click="addManualPoint" :disabled="isAnimating">添加坐标点</button>
       </div>
       
-      <div class="model-selector">
-        <span>选择模型:</span>
-        <select v-model="selectedModel">
-          <option v-for="option in modelOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-        </select>
+      <div class="animation-settings">
+        <h4>动画设置</h4>
+        <div class="input-group">
+          <label>速度:</label>
+          <input type="range" v-model="animationSpeed" min="0.1" max="5" step="0.1" />
+          <span>{{ animationSpeed }}x</span>
+        </div>
+        <div class="input-group">
+          <label>线宽:</label>
+          <input type="range" v-model="lineWidth" min="1" max="10" step="1" />
+          <span>{{ lineWidth }}px</span>
+        </div>
+        <div class="input-group">
+          <label>线颜色:</label>
+          <select v-model="lineColor">
+            <option value="RED">红色</option>
+            <option value="GREEN">绿色</option>
+            <option value="BLUE">蓝色</option>
+            <option value="YELLOW">黄色</option>
+            <option value="CYAN">青色</option>
+            <option value="MAGENTA">品红</option>
+            <option value="WHITE">白色</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>模型:</label>
+          <select v-model="selectedModel">
+            <option v-for="option in modelOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
       </div>
       
       <div class="points-list" v-if="points.length > 0">
         <h4>当前路径点 ({{ points.length }})</h4>
         <div class="point-item" v-for="(point, index) in displayPoints" :key="index">
           <span>点 {{ index + 1 }}: {{ point }}</span>
-          <button @click="removePoint(index)" :disabled="isAnimating" class="small-button">删除</button>
+          <button  @click="removePoint(index)" :disabled="isAnimating" class="small-button">删除</button>
         </div>
       </div>
     </div>
@@ -44,7 +75,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 
@@ -58,14 +89,31 @@ let viewer = null;
 const points = ref([]);
 const pointEntities = ref([]);
 const path = ref(null);
-const modelEntity = ref(null);
+const animationPath = ref(null);
 const isAnimating = ref(false);
-const selectedModel = ref('none');
+
+// 模型相关
+const modelOptions = [
+  { value: 'car', label: '小汽车' },
+  { value: 'airplane', label: '飞机' },
+  { value: 'point', label: '点标记' }
+];
+const selectedModel = ref('car');
 
 // 手动输入坐标
 const manualLongitude = ref(116.4074);
 const manualLatitude = ref(39.9042);
 const manualHeight = ref(0);
+const combinedCoordinates = ref('');
+
+// 动画设置
+const animationSpeed = ref(1.0);
+const lineWidth = ref(5);
+const lineColor = ref('BLUE');
+
+// 动画控制变量
+let animationCancel = null;
+let currentPointIndex = 0;
 
 // 显示的坐标点
 const displayPoints = computed(() => {
@@ -78,30 +126,6 @@ const displayPoints = computed(() => {
     return `经度:${lon}, 纬度:${lat}, 高度:${height}m`;
   });
 });
-
-// 模型定义
-const models = {
-  none: null, // 使用点实体
-  vehicle: {
-    uri: './assets/models/vehicle/vehicle.glb',
-    scale: 20.0,
-    minimumPixelSize: 64
-  },
-  airplane: {
-    uri: './assets/models/Cesium_Air.glb',
-    scale: 2.0,
-    minimumPixelSize: 80
-  },
-};
-
-// 更新模型选择器选项
-const modelOptions = [
-  { value: 'none', label: '无模型（使用点实体）' },
-  { value: 'vehicle', label: '本地车辆模型' },
-  { value: 'airplane', label: '本地飞机模型' },
-  { value: 'online_airplane', label: '在线飞机模型' },
-  { value: 'online_car', label: '在线车辆模型' }
-];
 
 onMounted(() => {
   try {
@@ -131,6 +155,25 @@ onMounted(() => {
     // 添加点击事件处理
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
     handler.setInputAction(handleMapClick, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    
+    // 添加默认点位：天安门西和国贸
+    setTimeout(() => {
+      // 添加天安门西
+      const tiananmenWest = Cesium.Cartesian3.fromDegrees(116.3833, 39.9062, 0);
+      addPointToPath(tiananmenWest);
+      
+      // 添加国贸
+      const chinaWorld = Cesium.Cartesian3.fromDegrees(116.4560, 39.9071, 0);
+      addPointToPath(chinaWorld);
+      
+      // 调整视图以显示这两点
+      viewer.camera.flyTo({
+        destination: Cesium.Rectangle.fromDegrees(
+          116.3833, 39.9062,
+          116.4560, 39.9071
+        )
+      });
+    }, 1000); // 延迟1秒添加，确保地图已完全加载
   } catch (error) {
     console.error('Cesium初始化错误:', error);
     status.value = '初始化失败: ' + error.message;
@@ -138,6 +181,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  // 如果动画正在进行，停止动画
+  stopAnimation();
+  
   if (viewer) {
     try {
       viewer.destroy();
@@ -176,6 +222,32 @@ const handleMapClick = (event) => {
     addPointToPath(cartesian);
   } catch (error) {
     console.error('处理点击事件出错:', error);
+  }
+};
+
+// 解析组合的经纬度坐标
+const parseCoordinates = () => {
+  if (!combinedCoordinates.value) return;
+  
+  try {
+    const parts = combinedCoordinates.value.split(',');
+    if (parts.length >= 2) {
+      const lon = parseFloat(parts[0].trim());
+      const lat = parseFloat(parts[1].trim());
+      
+      if (!isNaN(lon) && !isNaN(lat)) {
+        manualLongitude.value = lon;
+        manualLatitude.value = lat;
+        status.value = '经纬度解析成功';
+      } else {
+        status.value = '无法解析经纬度值';
+      }
+    } else {
+      status.value = '请使用逗号分隔经度和纬度';
+    }
+  } catch (error) {
+    console.error('解析经纬度出错:', error);
+    status.value = '解析经纬度出错';
   }
 };
 
@@ -282,8 +354,8 @@ const drawPath = () => {
     path.value = viewer.entities.add({
       polyline: {
         positions: points.value.map(p => p.position),
-        width: 3,
-        material: Cesium.Color.BLUE,
+        width: Number(lineWidth.value),
+        material: Cesium.Color[lineColor.value],
         clampToGround: false
       }
     });
@@ -302,9 +374,22 @@ const startAnimation = () => {
     
     // 创建时间序列
     const startTime = Cesium.JulianDate.now();
+    
+    // 计算总距离以确定动画时间
+    let totalDistance = 0;
+    for (let i = 0; i < points.value.length - 1; i++) {
+      totalDistance += Cesium.Cartesian3.distance(
+        points.value[i].position, 
+        points.value[i + 1].position
+      );
+    }
+    
+    // 基于总距离和速度计算总时间（秒）
+    const totalDuration = totalDistance / 100 / Number(animationSpeed.value);
+    
     const stopTime = Cesium.JulianDate.addSeconds(
       startTime, 
-      points.value.length * 3, 
+      totalDuration, 
       new Cesium.JulianDate()
     );
     
@@ -319,100 +404,221 @@ const startAnimation = () => {
     const position = new Cesium.SampledPositionProperty();
     
     // 添加每个点位的位置和时间
-    for (let i = 0; i < points.value.length; i++) {
-      const time = Cesium.JulianDate.addSeconds(
-        startTime, 
-        i * 3, 
+    let currentTime = startTime.clone();
+    position.addSample(currentTime, points.value[0].position);
+    
+    for (let i = 1; i < points.value.length; i++) {
+      // 计算当前段的距离
+      const segmentDistance = Cesium.Cartesian3.distance(
+        points.value[i-1].position, 
+        points.value[i].position
+      );
+      
+      // 基于距离计算时间增量
+      const timeIncrement = segmentDistance / totalDistance * totalDuration;
+      
+      // 更新时间
+      currentTime = Cesium.JulianDate.addSeconds(
+        currentTime,
+        timeIncrement,
         new Cesium.JulianDate()
       );
-      position.addSample(time, points.value[i].position);
+      
+      // 添加位置
+      const elevatedPosition = addHeightToPosition(points.value[i].position, 20);
+      position.addSample(currentTime, elevatedPosition);
     }
     
-    // 删除旧模型
-    if (modelEntity.value) {
-      viewer.entities.remove(modelEntity.value);
+    // 隐藏静态路径
+    if (path.value) {
+      path.value.polyline.show = false;
     }
     
-    // 根据选择的模型类型创建实体
-    if (selectedModel.value === 'none' || !models[selectedModel.value]) {
-      // 使用点实体
-      modelEntity.value = viewer.entities.add({
-        position: position,
-        point: {
-          pixelSize: 15,
-          color: Cesium.Color.RED,
-          outlineColor: Cesium.Color.WHITE,
-          outlineWidth: 2
-        },
-        path: {
-          resolution: 1,
-          material: Cesium.Color.YELLOW,
-          width: 3
-        }
-      });
-      status.value = '点实体动画进行中...';
-    } else {
-      // 使用3D模型
-      try {
-        console.log(`尝试加载模型: ${selectedModel.value}`);
-        const modelConfig = models[selectedModel.value];
-        
-        modelEntity.value = viewer.entities.add({
-          position: position,
-          orientation: new Cesium.VelocityOrientationProperty(position),
-          model: {
-            uri: modelConfig.uri,
-            scale: modelConfig.scale,
-            minimumPixelSize: modelConfig.minimumPixelSize,
-            maximumScale: 20000
-          },
-          path: {
-            resolution: 1,
-            material: Cesium.Color.YELLOW,
-            width: 3
+    // 删除旧的动画路径
+    if (animationPath.value) {
+      viewer.entities.remove(animationPath.value);
+    }
+    
+    // 创建可跟踪的3D模型实体
+    let modelUri;
+    let modelScale;
+    let modelMinPixelSize;
+    
+    switch (selectedModel.value) {
+      case 'car':
+        modelUri = 'https://sandcastle.cesium.com/SampleData/models/CesiumGround/Cesium_Ground_Vehicle.glb';
+        modelScale = 5.0;
+        modelMinPixelSize = 64;
+        break;
+      case 'airplane':
+        modelUri = 'https://sandcastle.cesium.com/SampleData/models/CesiumAir/Cesium_Air.glb';
+        modelScale = 5.0;
+        modelMinPixelSize = 64;
+        break;
+      case 'point':
+      default:
+        // 默认使用点
+        modelUri = null;
+        break;
+    }
+    
+    console.log("选择的模型:", selectedModel.value, "模型URI:", modelUri);
+    
+    // 创建一个动态路径
+    animationPath.value = viewer.entities.add({
+      polyline: {
+        positions: new Cesium.CallbackProperty((time) => {
+          // 获取当前时间已经走过的路径
+          if (!time) return [];
+          
+          const startPosition = position.getValue(startTime);
+          if (!startPosition) return [startPosition];
+          
+          const currentPosition = position.getValue(time);
+          if (!currentPosition) return [startPosition];
+          
+          // 获取动画开始到当前的所有点
+          const positions = [];
+          let t = Cesium.JulianDate.clone(startTime);
+          
+          while (Cesium.JulianDate.lessThanOrEquals(t, time)) {
+            const pos = position.getValue(t);
+            if (pos) positions.push(pos);
+            
+            t = Cesium.JulianDate.addSeconds(t, 0.5, new Cesium.JulianDate());
           }
-        });
-        
-        status.value = '3D模型动画进行中...';
-        console.log('模型加载请求已发送');
-      } catch (error) {
-        console.warn('3D模型加载失败, 使用点实体替代:', error);
-        
-        // 回退到点实体
-        modelEntity.value = viewer.entities.add({
-          position: position,
-          point: {
-            pixelSize: 15,
-            color: Cesium.Color.RED,
-            outlineColor: Cesium.Color.WHITE,
-            outlineWidth: 2
-          },
-          path: {
-            resolution: 1,
-            material: Cesium.Color.YELLOW,
-            width: 3
-          }
-        });
-        
-        status.value = '点实体动画进行中(模型加载失败)...';
+          
+          if (positions.length < 2) positions.push(currentPosition);
+          
+          return positions;
+        }, false),
+        width: Number(lineWidth.value) + 2,
+        material: new Cesium.PolylineDashMaterialProperty({
+          color: Cesium.Color.fromCssColorString('#FF4500').withAlpha(1.0), 
+          dashLength: 8.0,
+          dashPattern: 16
+        }),
+        clampToGround: false
       }
+    });
+    
+    // 创建模型实体
+    const trackedEntity = viewer.entities.add({
+      id: 'trackedPosition',
+      name: 'Current Position',
+      position: position,
+      orientation: new Cesium.VelocityOrientationProperty(position),
+      path: {
+        resolution: 1,
+        material: new Cesium.PolylineGlowMaterialProperty({
+          glowPower: 0.3,
+          color: Cesium.Color.CYAN.withAlpha(0.8)
+        }),
+        width: 3,
+        leadTime: 0,
+        trailTime: totalDuration // 显示整个路径
+      }
+    });
+    
+    // 根据选择添加模型或点实体
+    if (selectedModel.value !== 'point' && modelUri) {
+      // 添加模型
+      trackedEntity.model = {
+        uri: modelUri,
+        scale: modelScale,
+        minimumPixelSize: modelMinPixelSize,
+        maximumScale: 20000,
+        heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
+      };
+      
+      // 记录模型加载状态
+      console.log(`正在加载3D模型: ${modelUri}`);
+    } else {
+      // 使用点实体
+      trackedEntity.point = {
+        pixelSize: 15,
+        color: Cesium.Color.RED,
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2
+      };
     }
     
     // 跟踪模型
-    viewer.trackedEntity = modelEntity.value;
+    viewer.trackedEntity = trackedEntity;
     
     // 启动时钟
     viewer.clock.shouldAnimate = true;
+    
+    // 监听时钟事件
+    const removeClockListener = viewer.clock.onTick.addEventListener((clock) => {
+      const elapsedSeconds = Cesium.JulianDate.secondsDifference(
+        clock.currentTime, 
+        startTime
+      );
+      
+      status.value = `动画进行中... ${Math.round(elapsedSeconds)}/${Math.round(totalDuration)} 秒`;
+      
+      // 检查是否完成
+      if (Cesium.JulianDate.greaterThanOrEquals(clock.currentTime, stopTime)) {
+        viewer.clock.onTick.removeEventListener(removeClockListener);
+        
+        // 动画完成后显示静态路径
+        if (path.value) {
+          path.value.polyline.show = true;
+        }
+        
+        status.value = '动画完成';
+        console.log('动画完成');
+        
+        // 延迟一点时间再将状态设为非动画中，以便用户能看到完成状态
+        setTimeout(() => {
+          isAnimating.value = false;
+        }, 1000);
+      }
+    });
+    
+    console.log('开始时间序列动画，总时长:', totalDuration, '秒');
   } catch (error) {
     console.error('启动动画出错:', error);
     isAnimating.value = false;
-    status.value = '动画启动失败';
+    status.value = '动画启动失败: ' + error.message;
   }
 };
 
+// 增加点的高度以确保可见性
+function addHeightToPosition(position, heightToAdd) {
+  const cartographic = Cesium.Cartographic.fromCartesian(position);
+  return Cesium.Cartesian3.fromRadians(
+    cartographic.longitude,
+    cartographic.latitude,
+    (cartographic.height || 0) + heightToAdd
+  );
+}
+
+// 监听线宽和颜色的变化，更新路径
+watch([lineWidth, lineColor], () => {
+  if (points.value.length >= 2) {
+    drawPath();
+  }
+});
+
+// 监听组合坐标的变化，自动解析
+watch(combinedCoordinates, (newValue) => {
+  if (newValue) {
+    parseCoordinates();
+  }
+});
+
 // 清除路径
 const clearPath = () => {
-  if (isAnimating.value) return;
+  if (isAnimating.value) {
+    stopAnimation();
+  }
+  
+  if (window.animationFrameId) {
+    cancelAnimationFrame(window.animationFrameId);
+    window.animationFrameId = null;
+  }
   
   try {
     // 清除所有点实体
@@ -425,22 +631,58 @@ const clearPath = () => {
       viewer.entities.remove(path.value);
     }
     
-    // 清除模型
-    if (modelEntity.value) {
-      viewer.entities.remove(modelEntity.value);
+    // 清除动画路径
+    if (animationPath.value) {
+      viewer.entities.remove(animationPath.value);
     }
     
     // 重置状态
     points.value = [];
     pointEntities.value = [];
     path.value = null;
-    modelEntity.value = null;
-    viewer.trackedEntity = undefined;
+    animationPath.value = null;
     
     status.value = '路径已清除，点击地图添加新点';
   } catch (error) {
     console.error('清除路径出错:', error);
   }
+};
+
+// 停止动画
+const stopAnimation = () => {
+  if (animationCancel) {
+    animationCancel.cancelled = true;
+    animationCancel = null;
+  }
+  
+  if (window.animationFrameId) {
+    cancelAnimationFrame(window.animationFrameId);
+    window.animationFrameId = null;
+  }
+  
+  // 停止时钟
+  viewer.clock.shouldAnimate = false;
+  
+  if (animationPath.value) {
+    viewer.entities.remove(animationPath.value);
+    animationPath.value = null;
+  }
+  
+  // 停止跟踪实体
+  viewer.trackedEntity = undefined;
+  
+  // 移除跟踪实体
+  const trackedEntity = viewer.entities.getById('trackedPosition');
+  if (trackedEntity) {
+    viewer.entities.remove(trackedEntity);
+  }
+  
+  // 重新显示静态路径
+  if (path.value && points.value.length >= 2) {
+    path.value.polyline.show = true;
+  }
+  
+  isAnimating.value = false;
 };
 </script>
 
@@ -449,11 +691,14 @@ const clearPath = () => {
   position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  background-color: red;
 }
 
 #cesiumContainer {
   width: 100%;
   height: 100vh;
+  flex:1;
 }
 
 .control-panel {
@@ -497,7 +742,8 @@ const clearPath = () => {
   cursor: not-allowed;
 }
 
-.coordinate-input {
+.coordinate-input,
+.animation-settings {
   margin-top: 10px;
   display: flex;
   flex-direction: column;
@@ -514,7 +760,8 @@ const clearPath = () => {
   font-size: 14px;
 }
 
-.input-group input {
+.input-group input,
+.input-group select {
   flex: 1;
   padding: 5px;
   border-radius: 4px;
@@ -523,19 +770,10 @@ const clearPath = () => {
   color: white;
 }
 
-.model-selector {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-}
-
-.model-selector select {
-  margin-top: 5px;
-  padding: 5px;
-  border-radius: 4px;
-  background: #444;
-  color: white;
-  border: 1px solid #666;
+.input-group span {
+  margin-left: 5px;
+  min-width: 30px;
+  text-align: right;
 }
 
 .points-list {

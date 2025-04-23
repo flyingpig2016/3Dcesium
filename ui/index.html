@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家庭网络拓扑图管理平台</title>
+    <!-- Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background-color: #0a192f;
+            color: #ccd6f6;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #172a45;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #64ffda;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-top: 20px;
+            background-color: #112240;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            color: #8892b0;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            background-color: #1d4ed8;
+            color: #fff;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .scene-container {
+            width: 100%;
+            height: 70vh;
+            background-color: #112240;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(17, 34, 64, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .controls button {
+            background-color: #1d4ed8;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .controls button:hover {
+            background-color: #2563eb;
+        }
+        
+        .device-info {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background-color: rgba(17, 34, 64, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 300px;
+            display: none;
+        }
+        
+        .device-info h3 {
+            color: #64ffda;
+            margin-bottom: 10px;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #64ffda;
+            font-size: 24px;
+        }
+        
+        /* Device List Styles */
+        .device-list {
+            margin-top: 20px;
+            background-color: #112240;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .device-list h3 {
+            color: #64ffda;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .device-card {
+            background-color: #1e3a8a;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .device-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .device-icon {
+            font-size: 24px;
+            color: #64ffda;
+            margin-bottom: 10px;
+        }
+        
+        .device-name {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .device-status {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+        }
+        
+        .device-status.online {
+            background-color: #10b981;
+            color: white;
+        }
+        
+        .device-status.offline {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        /* Settings Styles */
+        .settings-container {
+            background-color: #112240;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .settings-container h2 {
+            color: #64ffda;
+            margin-bottom: 20px;
+        }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .settings-section {
+            background-color: #1e293b;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .settings-section h3 {
+            color: #ccd6f6;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .settings-btn {
+            background-color: #1d4ed8;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .settings-action {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .primary-btn {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .secondary-btn {
+            background-color: transparent;
+            color: #ccd6f6;
+            border: 1px solid #ccd6f6;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">家庭网络拓扑图管理平台</div>
+            <div class="user-info">
+                <i class="fas fa-user"></i> 管理员
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" data-tab="overview">全屋概览</button>
+            <button class="tab" data-tab="livingroom">客厅</button>
+            <button class="tab" data-tab="bedroom1">主卧</button>
+            <button class="tab" data-tab="bedroom2">次卧</button>
+            <button class="tab" data-tab="bedroom3">书房</button>
+            <button class="tab" data-tab="settings">设置</button>
+        </div>
+        
+        <div id="overview" class="tab-content active">
+            <div class="scene-container">
+                <div class="loading">加载中...</div>
+                <div class="device-info"></div>
+                <div class="controls">
+                    <button id="zoom-in"><i class="fas fa-search-plus"></i></button>
+                    <button id="zoom-out"><i class="fas fa-search-minus"></i></button>
+                    <button id="reset-view"><i class="fas fa-sync"></i></button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="livingroom" class="tab-content">
+            <div class="scene-container" id="livingroom-scene">
+                <div class="loading">加载中...</div>
+                <div class="device-info"></div>
+                <div class="controls">
+                    <button class="zoom-in"><i class="fas fa-search-plus"></i></button>
+                    <button class="zoom-out"><i class="fas fa-search-minus"></i></button>
+                    <button class="reset-view"><i class="fas fa-sync"></i></button>
+                </div>
+            </div>
+            <div class="device-list">
+                <h3>客厅设备</h3>
+                <div class="device-grid">
+                    <div class="device-card" data-device="livingRoomRouter">
+                        <div class="device-icon"><i class="fas fa-wifi"></i></div>
+                        <div class="device-name">客厅路由器</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                    <div class="device-card" data-device="smartTV">
+                        <div class="device-icon"><i class="fas fa-tv"></i></div>
+                        <div class="device-name">智能电视</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                    <div class="device-card" data-device="smartSpeaker">
+                        <div class="device-icon"><i class="fas fa-volume-up"></i></div>
+                        <div class="device-name">智能音箱</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                    <div class="device-card" data-device="robotVacuum">
+                        <div class="device-icon"><i class="fas fa-robot"></i></div>
+                        <div class="device-name">扫地机器人</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="bedroom1" class="tab-content">
+            <div class="scene-container" id="bedroom1-scene">
+                <div class="loading">加载中...</div>
+                <div class="device-info"></div>
+                <div class="controls">
+                    <button class="zoom-in"><i class="fas fa-search-plus"></i></button>
+                    <button class="zoom-out"><i class="fas fa-search-minus"></i></button>
+                    <button class="reset-view"><i class="fas fa-sync"></i></button>
+                </div>
+            </div>
+            <div class="device-list">
+                <h3>主卧设备</h3>
+                <div class="device-grid">
+                    <div class="device-card" data-device="masterRouter">
+                        <div class="device-icon"><i class="fas fa-wifi"></i></div>
+                        <div class="device-name">主卧路由器</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                    <div class="device-card" data-device="masterPC">
+                        <div class="device-icon"><i class="fas fa-desktop"></i></div>
+                        <div class="device-name">主卧电脑</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                    <div class="device-card" data-device="masterAC">
+                        <div class="device-icon"><i class="fas fa-wind"></i></div>
+                        <div class="device-name">主卧空调</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="bedroom2" class="tab-content">
+            <div class="scene-container" id="bedroom2-scene">
+                <div class="loading">加载中...</div>
+                <div class="device-info"></div>
+                <div class="controls">
+                    <button class="zoom-in"><i class="fas fa-search-plus"></i></button>
+                    <button class="zoom-out"><i class="fas fa-search-minus"></i></button>
+                    <button class="reset-view"><i class="fas fa-sync"></i></button>
+                </div>
+            </div>
+            <div class="device-list">
+                <h3>次卧设备</h3>
+                <div class="device-grid">
+                    <div class="device-card" data-device="bedroom2Router">
+                        <div class="device-icon"><i class="fas fa-wifi"></i></div>
+                        <div class="device-name">次卧路由器</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                    <div class="device-card" data-device="bedroom2PC">
+                        <div class="device-icon"><i class="fas fa-laptop"></i></div>
+                        <div class="device-name">次卧电脑</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                    <div class="device-card" data-device="bedroom2AC">
+                        <div class="device-icon"><i class="fas fa-wind"></i></div>
+                        <div class="device-name">次卧空调</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="bedroom3" class="tab-content">
+            <div class="scene-container" id="bedroom3-scene">
+                <div class="loading">加载中...</div>
+                <div class="device-info"></div>
+                <div class="controls">
+                    <button class="zoom-in"><i class="fas fa-search-plus"></i></button>
+                    <button class="zoom-out"><i class="fas fa-search-minus"></i></button>
+                    <button class="reset-view"><i class="fas fa-sync"></i></button>
+                </div>
+            </div>
+            <div class="device-list">
+                <h3>书房设备</h3>
+                <div class="device-grid">
+                    <div class="device-card" data-device="studyRouter">
+                        <div class="device-icon"><i class="fas fa-wifi"></i></div>
+                        <div class="device-name">书房路由器</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                    <div class="device-card" data-device="studyPC">
+                        <div class="device-icon"><i class="fas fa-desktop"></i></div>
+                        <div class="device-name">书房电脑</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                    <div class="device-card" data-device="studyAC">
+                        <div class="device-icon"><i class="fas fa-wind"></i></div>
+                        <div class="device-name">书房空调</div>
+                        <div class="device-status online">在线</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="settings" class="tab-content">
+            <div class="settings-container">
+                <h2>系统设置</h2>
+                <div class="settings-grid">
+                    <div class="settings-section">
+                        <h3>显示设置</h3>
+                        <div class="setting-item">
+                            <label for="show-labels">显示标签</label>
+                            <input type="checkbox" id="show-labels" checked>
+                        </div>
+                        <div class="setting-item">
+                            <label for="show-connections">显示连接</label>
+                            <input type="checkbox" id="show-connections" checked>
+                        </div>
+                        <div class="setting-item">
+                            <label for="show-animation">显示数据流动画</label>
+                            <input type="checkbox" id="show-animation" checked>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h3>模型设置</h3>
+                        <div class="setting-item">
+                            <label for="add-furniture">添加家具模型</label>
+                            <button id="add-furniture" class="settings-btn">添加</button>
+                        </div>
+                        <div class="setting-item">
+                            <label for="add-lights">添加灯光</label>
+                            <button id="add-lights" class="settings-btn">添加</button>
+                        </div>
+                        <div class="setting-item">
+                            <label for="model-quality">模型质量</label>
+                            <select id="model-quality">
+                                <option value="low">低</option>
+                                <option value="medium" selected>中</option>
+                                <option value="high">高</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-action">
+                    <button id="save-settings" class="primary-btn">保存设置</button>
+                    <button id="reset-settings" class="secondary-btn">重置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Basic tab functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Three.js initialization - Basic setup
+        let scene, camera, renderer, controls;
+        let houseModel, networkLines = [];
+
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x112240);
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 15);
+            camera.lookAt(0, 0, 0);
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.querySelector('.scene-container').appendChild(renderer.domElement);
+            document.querySelector('.loading').style.display = 'none';
+            
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 10);
+            scene.add(directionalLight);
+            
+            // Add controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.25;
+            controls.maxPolarAngle = Math.PI / 2;
+            
+            // Create floor plan
+            createHouseModel();
+            
+            // Create network devices
+            createNetworkDevices();
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize, false);
+            
+            // Setup control buttons
+            document.getElementById('zoom-in').addEventListener('click', () => {
+                camera.position.z -= 1;
+            });
+            
+            document.getElementById('zoom-out').addEventListener('click', () => {
+                camera.position.z += 1;
+            });
+            
+            document.getElementById('reset-view').addEventListener('click', () => {
+                camera.position.set(0, 15, 15);
+                camera.lookAt(0, 0, 0);
+                controls.reset();
+            });
+            
+            // Start animation loop
+            animate();
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Animate network data flow
+            animateNetworkLines();
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        // Create house floor plan
+        function createHouseModel() {
+            // Floor
+            const floorGeometry = new THREE.PlaneGeometry(20, 15);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x333333,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.7
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = Math.PI / 2;
+            scene.add(floor);
+            
+            // Room walls
+            createRoom(-6, 0, 7, 7, 'livingRoom', 0x2563eb, '客厅');
+            createRoom(3, 3.5, 7, 4, 'masterBedroom', 0x10b981, '主卧');
+            createRoom(3, -3.5, 7, 4, 'bedroom2', 0xf59e0b, '次卧');
+            createRoom(-6, -7, 7, 1, 'bedroom3', 0xef4444, '书房');
+            
+            // Add gridlines
+            const gridHelper = new THREE.GridHelper(20, 20, 0x555555, 0x333333);
+            scene.add(gridHelper);
+        }
+        
+        // Create a room with walls
+        function createRoom(x, z, width, depth, id, color, name) {
+            const roomGroup = new THREE.Group();
+            roomGroup.position.set(x, 0, z);
+            roomGroup.userData = { id, name };
+            
+            // Room floor with slight elevation to avoid z-fighting
+            const floorGeometry = new THREE.PlaneGeometry(width, depth);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color,
+                transparent: true,
+                opacity: 0.4,
+                side: THREE.DoubleSide
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = Math.PI / 2;
+            floor.position.y = 0.01; // Slight elevation
+            roomGroup.add(floor);
+            
+            // Room walls
+            const wallMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+            const wallGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-width/2, 0, -depth/2),
+                new THREE.Vector3(width/2, 0, -depth/2),
+                new THREE.Vector3(width/2, 0, depth/2),
+                new THREE.Vector3(-width/2, 0, depth/2),
+                new THREE.Vector3(-width/2, 0, -depth/2)
+            ]);
+            const walls = new THREE.Line(wallGeometry, wallMaterial);
+            walls.position.y = 0.02; // Slight elevation
+            roomGroup.add(walls);
+            
+            // Room label
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+            context.fillStyle = '#ffffff';
+            context.font = '32px Arial';
+            context.textAlign = 'center';
+            context.fillText(name, 128, 40);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const labelMaterial = new THREE.SpriteMaterial({ map: texture });
+            const label = new THREE.Sprite(labelMaterial);
+            label.position.set(0, 0.5, 0);
+            label.scale.set(5, 1.25, 1);
+            roomGroup.add(label);
+            
+            scene.add(roomGroup);
+            return roomGroup;
+        }
+        
+        // Create network devices in the house
+        function createNetworkDevices() {
+            // FTTR Gateway (main router)
+            const fttrGateway = createNetworkDevice(-8, 0.5, 2, 0x64ffda, 'FTTR网关');
+            
+            // Living room devices
+            const livingRoomRouter = createNetworkDevice(-6, 0.5, 0, 0x60a5fa, '客厅路由器');
+            const smartTV = createNetworkDevice(-8, 0.5, -2, 0x3b82f6, '智能电视');
+            const smartSpeaker = createNetworkDevice(-5, 0.5, -1, 0x93c5fd, '智能音箱');
+            const robotVacuum = createNetworkDevice(-7, 0.1, 1, 0xbfdbfe, '扫地机器人');
+            
+            // Master bedroom devices
+            const masterRouter = createNetworkDevice(2, 0.5, 4, 0x34d399, '主卧路由器');
+            const masterPC = createNetworkDevice(4, 0.5, 3, 0x6ee7b7, '主卧电脑');
+            const masterAC = createNetworkDevice(3, 1.5, 5, 0xa7f3d0, '主卧空调');
+            
+            // Bedroom 2 devices
+            const bedroom2Router = createNetworkDevice(2, 0.5, -3, 0xfbbf24, '次卧路由器');
+            const bedroom2PC = createNetworkDevice(4, 0.5, -4, 0xfcd34d, '次卧电脑');
+            const bedroom2AC = createNetworkDevice(3, 1.5, -2, 0xfde68a, '次卧空调');
+            
+            // Study room devices
+            const studyRouter = createNetworkDevice(-6, 0.5, -7, 0xef4444, '书房路由器');
+            const studyPC = createNetworkDevice(-7, 0.5, -6, 0xfca5a5, '书房电脑');
+            const studyAC = createNetworkDevice(-5, 1.5, -7, 0xfecaca, '书房空调');
+            
+            // Create network connections
+            createNetworkConnection(fttrGateway, livingRoomRouter, 0x64ffda);
+            createNetworkConnection(fttrGateway, masterRouter, 0x64ffda);
+            createNetworkConnection(fttrGateway, bedroom2Router, 0x64ffda);
+            createNetworkConnection(fttrGateway, studyRouter, 0x64ffda);
+            
+            // Living room connections
+            createNetworkConnection(livingRoomRouter, smartTV, 0x60a5fa);
+            createNetworkConnection(livingRoomRouter, smartSpeaker, 0x60a5fa);
+            createNetworkConnection(livingRoomRouter, robotVacuum, 0x60a5fa);
+            
+            // Master bedroom connections
+            createNetworkConnection(masterRouter, masterPC, 0x34d399);
+            createNetworkConnection(masterRouter, masterAC, 0x34d399);
+            
+            // Bedroom 2 connections
+            createNetworkConnection(bedroom2Router, bedroom2PC, 0xfbbf24);
+            createNetworkConnection(bedroom2Router, bedroom2AC, 0xfbbf24);
+            
+            // Study room connections
+            createNetworkConnection(studyRouter, studyPC, 0xef4444);
+            createNetworkConnection(studyRouter, studyAC, 0xef4444);
+        }
+        
+        // Create a network device (router, computer, etc.)
+        function createNetworkDevice(x, y, z, color, name) {
+            const device = new THREE.Group();
+            device.position.set(x, y, z);
+            device.userData = { name, type: 'device' };
+            
+            // Device body
+            const geometry = new THREE.BoxGeometry(0.8, 0.3, 0.4);
+            const material = new THREE.MeshStandardMaterial({ color });
+            const box = new THREE.Mesh(geometry, material);
+            device.add(box);
+            
+            // Device label
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+            context.fillStyle = '#ffffff';
+            context.font = '16px Arial';
+            context.textAlign = 'center';
+            context.fillText(name, 128, 32);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const labelMaterial = new THREE.SpriteMaterial({ map: texture });
+            const label = new THREE.Sprite(labelMaterial);
+            label.position.set(0, 0.3, 0);
+            label.scale.set(2, 0.5, 1);
+            device.add(label);
+            
+            // Make device interactive
+            device.userData.clickable = true;
+            
+            scene.add(device);
+            return device;
+        }
+        
+        // Create a network connection between two devices with data packets
+        function createNetworkConnection(device1, device2, color) {
+            // Create line between devices
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+                device1.position,
+                device2.position
+            ]);
+            const lineMaterial = new THREE.LineBasicMaterial({ 
+                color,
+                transparent: true,
+                opacity: 0.6
+            });
+            const line = new THREE.Line(lineGeometry, lineMaterial);
+            scene.add(line);
+            
+            // Create data packets
+            const packetCount = Math.floor(Math.random() * 3) + 1; // 1-3 packets per line
+            const packets = [];
+            
+            for(let i = 0; i < packetCount; i++) {
+                const packetGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+                const packetMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xffffff,
+                    emissive: color,
+                    emissiveIntensity: 0.8
+                });
+                const packet = new THREE.Mesh(packetGeometry, packetMaterial);
+                
+                // Random initial position along the line
+                const progress = Math.random();
+                packet.position.lerpVectors(device1.position, device2.position, progress);
+                
+                // Store animation data
+                packet.userData = {
+                    from: device1.position.clone(),
+                    to: device2.position.clone(),
+                    progress: progress,
+                    speed: 0.003 + Math.random() * 0.007 // Random speed
+                };
+                
+                scene.add(packet);
+                packets.push(packet);
+            }
+            
+            // Store line and packets for animation
+            networkLines.push({
+                line,
+                packets,
+                device1,
+                device2
+            });
+            
+            return line;
+        }
+        
+        // Animate network data packets along the lines
+        function animateNetworkLines() {
+            networkLines.forEach(connection => {
+                connection.packets.forEach(packet => {
+                    // Update packet position
+                    packet.userData.progress += packet.userData.speed;
+                    
+                    // Reset when reaching the end
+                    if(packet.userData.progress > 1) {
+                        packet.userData.progress = 0;
+                    }
+                    
+                    // Set new position
+                    packet.position.lerpVectors(
+                        connection.device1.position,
+                        connection.device2.position,
+                        packet.userData.progress
+                    );
+                });
+            });
+        }
+        
+        // Handle clicking on devices to show information
+        function setupInteraction() {
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            
+            window.addEventListener('click', (event) => {
+                // Calculate mouse position in normalized device coordinates
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                
+                // Update the raycaster
+                raycaster.setFromCamera(mouse, camera);
+                
+                // Get intersected objects
+                const intersects = raycaster.intersectObjects(scene.children, true);
+                
+                // Find first clickable object
+                let clickedObject = null;
+                for(let i = 0; i < intersects.length; i++) {
+                    let obj = intersects[i].object;
+                    
+                    // Traverse up to find parent with userData
+                    while(obj && !obj.userData.clickable && obj.parent) {
+                        obj = obj.parent;
+                    }
+                    
+                    if(obj && obj.userData.clickable) {
+                        clickedObject = obj;
+                        break;
+                    }
+                }
+                
+                if(clickedObject) {
+                    showDeviceInfo(clickedObject);
+                } else {
+                    hideDeviceInfo();
+                }
+            });
+        }
+        
+        // Show device information
+        function showDeviceInfo(device) {
+            const infoPanel = document.querySelector('.device-info');
+            infoPanel.innerHTML = `
+                <h3>${device.userData.name}</h3>
+                <p>类型: ${device.userData.type === 'device' ? '网络设备' : '其他'}</p>
+                <p>状态: 正常运行</p>
+                <p>数据传输: 5.2 Mbps</p>
+                <p>连接设备数: 3</p>
+            `;
+            infoPanel.style.display = 'block';
+        }
+        
+        // Hide device information panel
+        function hideDeviceInfo() {
+            const infoPanel = document.querySelector('.device-info');
+            infoPanel.style.display = 'none';
+        }
+        
+        // Initialize the 3D scene when page loads
+        window.addEventListener('load', () => {
+            init();
+            setupInteraction();
+            initRoomViews();
+            
+            // 在场景加载完成后立即加载3D模型
+            document.querySelector('.loading').textContent = '加载3D模型中...';
+            loadRealisticModels();
+        });
+        
+        // Room-specific views
+        let roomScenes = {};
+        
+        function initRoomViews() {
+            // Initialize individual room views
+            const rooms = [
+                { id: 'livingroom', color: 0x2563eb, position: { x: -6, y: 0, z: 0 } },
+                { id: 'bedroom1', color: 0x10b981, position: { x: 3, y: 0, z: 3.5 } },
+                { id: 'bedroom2', color: 0xf59e0b, position: { x: 3, y: 0, z: -3.5 } },
+                { id: 'bedroom3', color: 0xef4444, position: { x: -6, y: 0, z: -7 } }
+            ];
+            
+            rooms.forEach(room => {
+                initRoomScene(room.id, room.color, room.position);
+            });
+            
+            // Setup device card click events
+            document.querySelectorAll('.device-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const deviceId = card.dataset.device;
+                    const tabId = card.closest('.tab-content').id;
+                    focusOnDevice(tabId, deviceId);
+                });
+            });
+            
+            // Setup settings controls
+            document.getElementById('show-labels').addEventListener('change', (e) => {
+                toggleLabels(e.target.checked);
+            });
+            
+            document.getElementById('show-connections').addEventListener('change', (e) => {
+                toggleConnections(e.target.checked);
+            });
+            
+            document.getElementById('show-animation').addEventListener('change', (e) => {
+                toggleAnimation(e.target.checked);
+            });
+            
+            document.getElementById('add-furniture').addEventListener('click', () => {
+                addFurnitureModels();
+            });
+            
+            document.getElementById('add-lights').addEventListener('click', () => {
+                addLights();
+            });
+            
+            document.getElementById('save-settings').addEventListener('click', () => {
+                saveSettings();
+            });
+        }
+        
+        function initRoomScene(roomId, roomColor, position) {
+            const container = document.getElementById(`${roomId}-scene`);
+            
+            // Create scene
+            const roomScene = new THREE.Scene();
+            roomScene.background = new THREE.Color(0x112240);
+            
+            // Create camera
+            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 8, 8);
+            camera.lookAt(0, 0, 0);
+            
+            // Create renderer
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.querySelector('.loading').style.display = 'none';
+            container.appendChild(renderer.domElement);
+            
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            roomScene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            roomScene.add(directionalLight);
+            
+            // Add controls
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.25;
+            
+            // Setup control buttons
+            container.querySelector('.zoom-in').addEventListener('click', () => {
+                camera.position.z -= 1;
+            });
+            
+            container.querySelector('.zoom-out').addEventListener('click', () => {
+                camera.position.z += 1;
+            });
+            
+            container.querySelector('.reset-view').addEventListener('click', () => {
+                camera.position.set(0, 8, 8);
+                camera.lookAt(0, 0, 0);
+                controls.reset();
+            });
+            
+            // Create room model based on room ID
+            createRoomModel(roomScene, roomId, roomColor);
+            
+            // Store scene data
+            roomScenes[roomId] = {
+                scene: roomScene,
+                camera: camera,
+                renderer: renderer,
+                controls: controls,
+                devices: {}
+            };
+            
+            // Start animation
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(roomScene, camera);
+            }
+            animate();
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+        
+        function createRoomModel(scene, roomId, color) {
+            // Create floor
+            const floorGeometry = new THREE.PlaneGeometry(10, 10);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = Math.PI / 2;
+            floor.position.y = 0;
+            scene.add(floor);
+            
+            // Add wall outlines
+            const wallMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+            const wallGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-5, 0, -5),
+                new THREE.Vector3(5, 0, -5),
+                new THREE.Vector3(5, 0, 5),
+                new THREE.Vector3(-5, 0, 5),
+                new THREE.Vector3(-5, 0, -5)
+            ]);
+            const walls = new THREE.Line(wallGeometry, wallMaterial);
+            walls.position.y = 0.01;
+            scene.add(walls);
+            
+            // 确保devices对象已初始化
+            if (!roomScenes[roomId].devices) {
+                roomScenes[roomId].devices = {};
+            }
+            
+            // Add room-specific devices
+            if (roomId === 'livingroom') {
+                const router = createRoomDevice(scene, 0, 0.5, 0, 0x60a5fa, '客厅路由器');
+                const tv = createRoomDevice(scene, -3, 0.5, -3, 0x3b82f6, '智能电视');
+                const speaker = createRoomDevice(scene, 2, 0.5, -2, 0x93c5fd, '智能音箱');
+                const vacuum = createRoomDevice(scene, -2, 0.1, 3, 0xbfdbfe, '扫地机器人');
+                
+                // Add connections
+                createRoomConnection(scene, router, tv, 0x60a5fa);
+                createRoomConnection(scene, router, speaker, 0x60a5fa);
+                createRoomConnection(scene, router, vacuum, 0x60a5fa);
+                
+                roomScenes[roomId].devices = {
+                    livingRoomRouter: router,
+                    smartTV: tv,
+                    smartSpeaker: speaker,
+                    robotVacuum: vacuum
+                };
+            } 
+            else if (roomId === 'bedroom1') {
+                const router = createRoomDevice(scene, 0, 0.5, 0, 0x34d399, '主卧路由器');
+                const pc = createRoomDevice(scene, 3, 0.5, -2, 0x6ee7b7, '主卧电脑');
+                const ac = createRoomDevice(scene, -3, 1.5, 3, 0xa7f3d0, '主卧空调');
+                
+                createRoomConnection(scene, router, pc, 0x34d399);
+                createRoomConnection(scene, router, ac, 0x34d399);
+                
+                roomScenes[roomId].devices = {
+                    masterRouter: router,
+                    masterPC: pc,
+                    masterAC: ac
+                };
+            } 
+            else if (roomId === 'bedroom2') {
+                const router = createRoomDevice(scene, 0, 0.5, 0, 0xfbbf24, '次卧路由器');
+                const pc = createRoomDevice(scene, 3, 0.5, -2, 0xfcd34d, '次卧电脑');
+                const ac = createRoomDevice(scene, -3, 1.5, 3, 0xfde68a, '次卧空调');
+                
+                createRoomConnection(scene, router, pc, 0xfbbf24);
+                createRoomConnection(scene, router, ac, 0xfbbf24);
+                
+                roomScenes[roomId].devices = {
+                    bedroom2Router: router,
+                    bedroom2PC: pc,
+                    bedroom2AC: ac
+                };
+            } 
+            else if (roomId === 'bedroom3') {
+                const router = createRoomDevice(scene, 0, 0.5, 0, 0xef4444, '书房路由器');
+                const pc = createRoomDevice(scene, 3, 0.5, -2, 0xfca5a5, '书房电脑');
+                const ac = createRoomDevice(scene, -3, 1.5, 3, 0xfecaca, '书房空调');
+                
+                createRoomConnection(scene, router, pc, 0xef4444);
+                createRoomConnection(scene, router, ac, 0xef4444);
+                
+                roomScenes[roomId].devices = {
+                    studyRouter: router,
+                    studyPC: pc,
+                    studyAC: ac
+                };
+            }
+            
+            // Add grid for reference
+            const gridHelper = new THREE.GridHelper(10, 10, 0x555555, 0x333333);
+            scene.add(gridHelper);
+        }
+        
+        function createRoomDevice(scene, x, y, z, color, name) {
+            const device = new THREE.Group();
+            device.position.set(x, y, z);
+            device.userData = { name, type: 'device' };
+            
+            // Device body
+            const geometry = new THREE.BoxGeometry(1, 0.3, 0.5);
+            const material = new THREE.MeshStandardMaterial({ color });
+            const box = new THREE.Mesh(geometry, material);
+            device.add(box);
+            
+            // Device label
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+            context.fillStyle = '#ffffff';
+            context.font = '20px Arial';
+            context.textAlign = 'center';
+            context.fillText(name, 128, 32);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const labelMaterial = new THREE.SpriteMaterial({ map: texture });
+            const label = new THREE.Sprite(labelMaterial);
+            label.position.set(0, 0.5, 0);
+            label.scale.set(3, 0.75, 1);
+            device.add(label);
+            
+            scene.add(device);
+            return device;
+        }
+        
+        function createRoomConnection(scene, device1, device2, color) {
+            // Create line geometry
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+                device1.position,
+                device2.position
+            ]);
+            const lineMaterial = new THREE.LineBasicMaterial({ 
+                color,
+                transparent: true,
+                opacity: 0.6
+            });
+            const line = new THREE.Line(lineGeometry, lineMaterial);
+            scene.add(line);
+            
+            // Create data packet for animation
+            const packetGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+            const packetMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xffffff,
+                emissive: color,
+                emissiveIntensity: 0.8
+            });
+            const packet = new THREE.Mesh(packetGeometry, packetMaterial);
+            packet.position.copy(device1.position);
+            
+            // Animation data
+            packet.userData = {
+                from: device1.position.clone(),
+                to: device2.position.clone(),
+                progress: 0,
+                speed: 0.01,
+                direction: 1
+            };
+            
+            scene.add(packet);
+            
+            // Animate packet
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // Update packet position
+                packet.userData.progress += packet.userData.speed * packet.userData.direction;
+                
+                // Change direction at endpoints
+                if (packet.userData.progress >= 1) {
+                    packet.userData.direction = -1; // Start moving back
+                } else if (packet.userData.progress <= 0) {
+                    packet.userData.direction = 1; // Start moving forward
+                }
+                
+                // Set new position
+                packet.position.lerpVectors(
+                    packet.userData.from,
+                    packet.userData.to,
+                    packet.userData.progress
+                );
+            }
+            
+            animate();
+            
+            return { line, packet };
+        }
+        
+        function focusOnDevice(roomId, deviceId) {
+            // Get the room scene
+            const roomData = roomScenes[roomId];
+            if (!roomData || !roomData.devices || !roomData.devices[deviceId]) return;
+            
+            // Get the device
+            const device = roomData.devices[deviceId];
+            
+            // Focus camera on the device
+            const camera = roomData.camera;
+            const controls = roomData.controls;
+            
+            // Create a new position that looks at the device from a slight angle
+            const offset = new THREE.Vector3(2, 3, 2);
+            camera.position.copy(device.position).add(offset);
+            controls.target.copy(device.position);
+            
+            // Show device info in the room
+            const infoPanel = document.querySelector(`#${roomId}-scene .device-info`);
+            infoPanel.innerHTML = `
+                <h3>${device.userData.name}</h3>
+                <p>类型: 网络设备</p>
+                <p>状态: 正常运行</p>
+                <p>数据传输: ${Math.floor(Math.random() * 10) + 1}.${Math.floor(Math.random() * 9)}Mbps</p>
+                <p>IP地址: 192.168.1.${Math.floor(Math.random() * 100) + 1}</p>
+            `;
+            infoPanel.style.display = 'block';
+        }
+        
+        // Settings functions
+        function toggleLabels(show) {
+            // Toggle labels in main overview
+            scene.traverse(obj => {
+                if (obj.type === 'Sprite') {
+                    obj.visible = show;
+                }
+            });
+            
+            // Toggle labels in individual room views
+            Object.values(roomScenes).forEach(roomData => {
+                roomData.scene.traverse(obj => {
+                    if (obj.type === 'Sprite') {
+                        obj.visible = show;
+                    }
+                });
+            });
+        }
+        
+        function toggleConnections(show) {
+            // Toggle connection lines in main overview
+            networkLines.forEach(conn => {
+                conn.line.visible = show;
+            });
+            
+            // Toggle connection lines in room views
+            Object.values(roomScenes).forEach(roomData => {
+                roomData.scene.traverse(obj => {
+                    if (obj.type === 'Line') {
+                        obj.visible = show;
+                    }
+                });
+            });
+        }
+        
+        function toggleAnimation(show) {
+            // Toggle animation in main overview
+            networkLines.forEach(conn => {
+                conn.packets.forEach(packet => {
+                    packet.visible = show;
+                });
+            });
+            
+            // Toggle animation in room views
+            Object.values(roomScenes).forEach(roomData => {
+                roomData.scene.traverse(obj => {
+                    if (obj.geometry && obj.geometry.type === 'SphereGeometry' && obj.geometry.parameters.radius < 0.3) {
+                        obj.visible = show;
+                    }
+                });
+            });
+        }
+        
+        function addFurnitureModels() {
+            // Show a furniture selector modal in future implementation
+            const furnitureTypes = [
+                { id: 'sofa', name: '沙发', room: 'livingroom' },
+                { id: 'tv_stand', name: '电视柜', room: 'livingroom' },
+                { id: 'bed', name: '床', room: 'bedroom1' },
+                { id: 'desk', name: '书桌', room: 'bedroom3' }
+            ];
+            
+            // For now, just simulate adding a simple furniture object to the living room
+            const livingroomScene = roomScenes['livingroom'].scene;
+            
+            // Create a simple sofa model
+            const sofaGroup = new THREE.Group();
+            
+            // Sofa base
+            const baseGeometry = new THREE.BoxGeometry(3, 0.5, 1.5);
+            const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x2563eb });
+            const base = new THREE.Mesh(baseGeometry, baseMaterial);
+            sofaGroup.add(base);
+            
+            // Sofa back
+            const backGeometry = new THREE.BoxGeometry(3, 1, 0.5);
+            const backMaterial = new THREE.MeshStandardMaterial({ color: 0x1e40af });
+            const back = new THREE.Mesh(backGeometry, backMaterial);
+            back.position.set(0, 0.75, -0.5);
+            sofaGroup.add(back);
+            
+            // Sofa armrests
+            const armGeometry = new THREE.BoxGeometry(0.5, 0.75, 1.5);
+            const armMaterial = new THREE.MeshStandardMaterial({ color: 0x1e40af });
+            
+            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+            leftArm.position.set(-1.25, 0.5, 0);
+            sofaGroup.add(leftArm);
+            
+            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+            rightArm.position.set(1.25, 0.5, 0);
+            sofaGroup.add(rightArm);
+            
+            // Position sofa in the room
+            sofaGroup.position.set(-2, 0.25, 2);
+            sofaGroup.userData = { type: 'furniture', name: '沙发' };
+            
+            livingroomScene.add(sofaGroup);
+            
+            alert('已添加沙发模型到客厅');
+        }
+        
+        function addLights() {
+            // Add ceiling lights to all rooms
+            Object.entries(roomScenes).forEach(([roomId, roomData]) => {
+                // Create ceiling light
+                const lightGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16);
+                const lightMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xffffcc,
+                    emissive: 0xffffcc,
+                    emissiveIntensity: 0.5
+                });
+                const lightFixture = new THREE.Mesh(lightGeometry, lightMaterial);
+                
+                // Position in center of ceiling
+                lightFixture.position.set(0, 2.5, 0);
+                lightFixture.rotation.x = Math.PI / 2;
+                
+                // Add actual light source
+                const pointLight = new THREE.PointLight(0xffffcc, 1, 10);
+                pointLight.position.set(0, 0, 0);
+                lightFixture.add(pointLight);
+                
+                roomData.scene.add(lightFixture);
+                
+                // Create light helper for visualization
+                const sphereSize = 0.2;
+                const pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
+                roomData.scene.add(pointLightHelper);
+            });
+            
+            // Add table lamp to the study room
+            const studyScene = roomScenes['bedroom3'].scene;
+            
+            // Create lamp base
+            const lampBaseGeometry = new THREE.CylinderGeometry(0.2, 0.3, 0.1, 16);
+            const lampBaseMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const lampBase = new THREE.Mesh(lampBaseGeometry, lampBaseMaterial);
+            
+            // Create lamp pole
+            const lampPoleGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.6, 8);
+            const lampPoleMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 });
+            const lampPole = new THREE.Mesh(lampPoleGeometry, lampPoleMaterial);
+            lampPole.position.set(0, 0.35, 0);
+            
+            // Create lamp shade
+            const lampShadeGeometry = new THREE.ConeGeometry(0.3, 0.4, 16, 1, true);
+            const lampShadeMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xffffcc,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.7
+            });
+            const lampShade = new THREE.Mesh(lampShadeGeometry, lampShadeMaterial);
+            lampShade.position.set(0, 0.7, 0);
+            lampShade.rotation.x = Math.PI;
+            
+            // Group lamp parts
+            const lampGroup = new THREE.Group();
+            lampGroup.add(lampBase);
+            lampGroup.add(lampPole);
+            lampGroup.add(lampShade);
+            
+            // Add light source
+            const lampLight = new THREE.PointLight(0xffffcc, 0.8, 5);
+            lampLight.position.set(0, 0.7, 0);
+            lampGroup.add(lampLight);
+            
+            // Position lamp
+            lampGroup.position.set(2, 0.7, 1);
+            
+            studyScene.add(lampGroup);
+            
+            alert('已添加灯光到所有房间');
+        }
+        
+        function saveSettings() {
+            // Get all settings
+            const settings = {
+                showLabels: document.getElementById('show-labels').checked,
+                showConnections: document.getElementById('show-connections').checked,
+                showAnimation: document.getElementById('show-animation').checked,
+                modelQuality: document.getElementById('model-quality').value
+            };
+            
+            // Apply settings
+            toggleLabels(settings.showLabels);
+            toggleConnections(settings.showConnections);
+            toggleAnimation(settings.showAnimation);
+            
+            // Store settings in localStorage for persistence
+            localStorage.setItem('networkTopoSettings', JSON.stringify(settings));
+            
+            alert('设置已保存');
+        }
+        
+        // Model Loading Utility (for future implementation)
+        function loadGLTFModel(url, scene, position, scale, rotation, successCallback, errorCallback) {
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                url,
+                (gltf) => {
+                    const model = gltf.scene;
+                    
+                    // 应用变换
+                    if (position) model.position.copy(position);
+                    if (scale) model.scale.copy(scale);
+                    if (rotation) {
+                        model.rotation.x = rotation.x || 0;
+                        model.rotation.y = rotation.y || 0;
+                        model.rotation.z = rotation.z || 0;
+                    }
+                    
+                    // 为模型添加阴影效果
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    
+                    // 添加到场景
+                    scene.add(model);
+                    
+                    // 执行成功回调
+                    if (successCallback && typeof successCallback === 'function') {
+                        successCallback(model);
+                    }
+                },
+                (xhr) => {
+                    console.log((xhr.loaded / xhr.total * 100).toFixed(2) + '% 已加载: ' + url);
+                },
+                (error) => {
+                    console.error('加载模型错误:', error);
+                    
+                    // 执行错误回调
+                    if (errorCallback && typeof errorCallback === 'function') {
+                        errorCallback(error);
+                    }
+                }
+            );
+        }
+        
+        // Load settings from localStorage on startup
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('networkTopoSettings');
+            if (savedSettings) {
+                try {
+                    const settings = JSON.parse(savedSettings);
+                    
+                    // Apply saved settings to UI
+                    document.getElementById('show-labels').checked = settings.showLabels;
+                    document.getElementById('show-connections').checked = settings.showConnections;
+                    document.getElementById('show-animation').checked = settings.showAnimation;
+                    document.getElementById('model-quality').value = settings.modelQuality || 'medium';
+                    
+                    // Apply visual settings
+                    toggleLabels(settings.showLabels);
+                    toggleConnections(settings.showConnections);
+                    toggleAnimation(settings.showAnimation);
+                } catch (e) {
+                    console.error('Error loading settings:', e);
+                }
+            }
+        }
+        
+        // 替换设备为真实的3D模型
+        function loadRealisticModels() {
+            // 模型资源基础路径
+            const modelBasePath = 'models/';
+            
+            // 显示加载状态
+            const loadingElement = document.querySelector('.loading');
+            if (loadingElement) {
+                loadingElement.textContent = '加载3D模型中...';
+                loadingElement.style.display = 'block';
+            }
+            
+            // 模型定义，包括类型、文件路径、缩放和位置偏移
+            const deviceModels = {
+                'router': {
+                    path: modelBasePath + 'router.glb',
+                    scale: new THREE.Vector3(0.3, 0.3, 0.3),
+                    offset: new THREE.Vector3(0, 0, 0),
+                    rotation: new THREE.Vector3(0, Math.PI, 0)
+                },
+                'tv': {
+                    path: modelBasePath + 'tv.glb',
+                    scale: new THREE.Vector3(0.4, 0.4, 0.4),
+                    offset: new THREE.Vector3(0, 0.3, 0),
+                    rotation: new THREE.Vector3(0, Math.PI / 2, 0)
+                },
+                'speaker': {
+                    path: modelBasePath + 'speaker.glb',
+                    scale: new THREE.Vector3(0.2, 0.2, 0.2),
+                    offset: new THREE.Vector3(0, 0, 0)
+                },
+                'vacuum': {
+                    path: modelBasePath + 'vacuum.glb',
+                    scale: new THREE.Vector3(0.2, 0.2, 0.2),
+                    offset: new THREE.Vector3(0, -0.05, 0)
+                },
+                'pc': {
+                    path: modelBasePath + 'computer.glb',
+                    scale: new THREE.Vector3(0.3, 0.3, 0.3),
+                    offset: new THREE.Vector3(0, 0.2, 0),
+                    rotation: new THREE.Vector3(0, Math.PI / 2, 0)
+                },
+                'ac': {
+                    path: modelBasePath + 'ac.glb',
+                    scale: new THREE.Vector3(0.3, 0.3, 0.3),
+                    offset: new THREE.Vector3(0, 0.8, 0),
+                    rotation: new THREE.Vector3(0, 0, 0)
+                }
+            };
+            
+            try {
+                // 跟踪加载的模型数量
+                let totalModelsToLoad = 0;
+                let loadedModelsCount = 0;
+                let hasErrors = false;
+                
+                // 替换主场景中的设备
+                const mainSceneDevices = findDevicesInScene(scene);
+                totalModelsToLoad += mainSceneDevices.length;
+                
+                // 计算所有房间中的设备总数
+                Object.keys(roomScenes).forEach(roomId => {
+                    if (roomScenes[roomId] && roomScenes[roomId].scene) {
+                        const roomDevices = findDevicesInScene(roomScenes[roomId].scene);
+                        totalModelsToLoad += roomDevices.length;
+                    }
+                });
+                
+                // 如果没有设备需要替换，直接结束
+                if (totalModelsToLoad === 0) {
+                    if (loadingElement) loadingElement.style.display = 'none';
+                    console.log('没有找到需要替换的设备');
+                    setTimeout(loadSettings, 500);
+                    return;
+                }
+                
+                // 更新加载进度的函数
+                const updateLoadingProgress = () => {
+                    loadedModelsCount++;
+                    const progress = Math.floor((loadedModelsCount / totalModelsToLoad) * 100);
+                    
+                    if (loadingElement) {
+                        loadingElement.textContent = `加载3D模型中... ${progress}%`;
+                    }
+                    
+                    if (loadedModelsCount >= totalModelsToLoad) {
+                        if (loadingElement) loadingElement.style.display = 'none';
+                        
+                        if (hasErrors) {
+                            console.warn('部分3D模型加载失败，但应用程序继续运行');
+                        } else {
+                            console.log('所有3D模型加载完成!');
+                        }
+                        
+                        // 加载设置
+                        setTimeout(loadSettings, 500);
+                    }
+                };
+                
+                // 错误处理函数
+                const handleError = (error) => {
+                    hasErrors = true;
+                    console.error('模型加载失败:', error);
+                    updateLoadingProgress(); // 仍然更新进度，即使加载失败
+                };
+                
+                // 替换主场景中的设备
+                replaceSimpleDevicesWithModels(scene, deviceModels, updateLoadingProgress, handleError);
+                
+                // 替换每个房间场景中的设备
+                Object.keys(roomScenes).forEach(roomId => {
+                    if (roomScenes[roomId] && roomScenes[roomId].scene) {
+                        replaceSimpleDevicesWithModels(
+                            roomScenes[roomId].scene, 
+                            deviceModels, 
+                            updateLoadingProgress,
+                            handleError
+                        );
+                    }
+                });
+            } catch (error) {
+                console.error('加载3D模型过程中发生错误:', error);
+                if (loadingElement) loadingElement.style.display = 'none';
+                
+                // 出错后仍然加载设置
+                setTimeout(loadSettings, 500);
+            }
+        }
+        
+        // 在场景中查找所有设备
+        function findDevicesInScene(targetScene) {
+            if (!targetScene) return [];
+            
+            const devices = [];
+            
+            try {
+                targetScene.traverse(obj => {
+                    if (obj && obj.userData && obj.userData.type === 'device') {
+                        devices.push(obj);
+                    }
+                });
+            } catch (error) {
+                console.error('查找设备过程中发生错误:', error);
+            }
+            
+            return devices;
+        }
+        
+        // 在场景中替换简单设备为3D模型
+        function replaceSimpleDevicesWithModels(targetScene, deviceModels, onLoadCallback, onErrorCallback) {
+            if (!targetScene) {
+                if (onErrorCallback) onErrorCallback(new Error('目标场景未定义'));
+                return;
+            }
+            
+            // 查找场景中的所有设备
+            const devices = findDevicesInScene(targetScene);
+            
+            // 如果没有设备要替换，调用回调
+            if (devices.length === 0) {
+                if (onLoadCallback) onLoadCallback();
+                return;
+            }
+            
+            // 替换每个设备
+            devices.forEach(deviceObj => {
+                try {
+                    if (!deviceObj || !deviceObj.userData) {
+                        if (onErrorCallback) onErrorCallback(new Error('设备对象无效'));
+                        if (onLoadCallback) onLoadCallback(); // 继续处理下一个
+                        return;
+                    }
+                    
+                    const deviceName = deviceObj.userData.name || '未知设备';
+                    const position = deviceObj.position.clone();
+                    let modelType = '';
+                    
+                    // 根据设备名称确定模型类型
+                    if (deviceName.includes('路由器')) modelType = 'router';
+                    else if (deviceName.includes('电视')) modelType = 'tv';
+                    else if (deviceName.includes('音箱')) modelType = 'speaker';
+                    else if (deviceName.includes('扫地机')) modelType = 'vacuum';
+                    else if (deviceName.includes('电脑')) modelType = 'pc';
+                    else if (deviceName.includes('空调')) modelType = 'ac';
+                    
+                    if (modelType && deviceModels[modelType]) {
+                        const modelInfo = deviceModels[modelType];
+                        
+                        // 保存原始设备的信息
+                        const originalUserData = {...deviceObj.userData};
+                        
+                        // 加载模型前临时保留原始设备
+                        const originalVisible = deviceObj.visible;
+                        deviceObj.visible = false;
+                        
+                        // 加载替换模型
+                        loadGLTFModel(
+                            modelInfo.path, 
+                            targetScene, 
+                            new THREE.Vector3(
+                                position.x + (modelInfo.offset ? modelInfo.offset.x : 0), 
+                                position.y + (modelInfo.offset ? modelInfo.offset.y : 0), 
+                                position.z + (modelInfo.offset ? modelInfo.offset.z : 0)
+                            ),
+                            modelInfo.scale,
+                            modelInfo.rotation || null,
+                            (modelGroup) => {
+                                // 加载成功后移除原始设备
+                                try {
+                                    targetScene.remove(deviceObj);
+                                } catch (e) {
+                                    console.warn('移除原始设备时出错:', e);
+                                }
+                                
+                                // 将原始设备的userData传递给新模型
+                                modelGroup.userData = originalUserData;
+                                modelGroup.userData.isRealisticModel = true;
+                                
+                                // 让模型可点击
+                                modelGroup.userData.clickable = true;
+                                
+                                // 如果原设备被隐藏，同样隐藏新模型
+                                modelGroup.visible = originalVisible;
+                                
+                                console.log(`已替换设备: ${deviceName}`);
+                                
+                                // 调用加载回调
+                                if (onLoadCallback) {
+                                    onLoadCallback();
+                                }
+                            },
+                            (error) => {
+                                // 加载失败的回调
+                                console.error(`无法加载模型 ${modelInfo.path}:`, error);
+                                
+                                // 确保原始设备保持可见
+                                deviceObj.visible = originalVisible;
+                                
+                                // 调用错误回调
+                                if (onErrorCallback) onErrorCallback(error);
+                                
+                                // 调用加载回调以继续流程
+                                if (onLoadCallback) {
+                                    onLoadCallback();
+                                }
+                            }
+                        );
+                    } else {
+                        // 如果没有找到对应的模型类型，直接调用回调
+                        console.warn(`未找到设备 ${deviceName} 对应的模型类型`);
+                        if (onLoadCallback) {
+                            onLoadCallback();
+                        }
+                    }
+                } catch (error) {
+                    console.error('处理设备时发生错误:', error);
+                    if (onErrorCallback) onErrorCallback(error);
+                    if (onLoadCallback) onLoadCallback(); // 继续处理下一个
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -10,8 +10,8 @@ import Cesium from './views/Cesium.vue'
 
 // Configure routes
 const routes = [
-  { path: '/', component: Dashboard },
   { path: '/cesium', component: Cesium },
+  { path: '/dashboard', component: Dashboard },
   
 ]
 
